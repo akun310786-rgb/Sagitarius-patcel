@@ -26,7 +26,9 @@ import {
   Sparkles,
   ShieldCheck,
   Calendar,
-  Check
+  Check,
+  AlertTriangle,
+  Hourglass
 } from 'lucide-react';
 
 interface MemberDashboardProps {
@@ -112,6 +114,15 @@ export const MemberDashboard: React.FC<MemberDashboardProps> = ({
 
   const percent = Math.min(100, Math.round((member.totalSaved / member.packagePrice) * 100));
   const remaining = Math.max(0, member.packagePrice - member.totalSaved);
+
+  // Status dan kalkulasi 'Hampir Jatuh Tempo' (< 3 bulan / 90 hari menjelang Hari Raya)
+  const isNotFullyPaid = remaining > 0 && member.status !== 'Lunas';
+  // Hari raya dan serah terima paket H-7 Lebaran berada dalam rentang ±55 hari (< 90 hari)
+  const daysUntilDue = 55;
+  const isDueSoon = isNotFullyPaid && daysUntilDue < 90;
+  // Rekomendasi percepatan nominal agar target tercapai tepat waktu
+  const acceleratedDailyRate = Math.ceil(remaining / daysUntilDue);
+  const acceleratedWeeklyRate = Math.ceil(remaining / Math.ceil(daysUntilDue / 7));
 
   const currentPkg =
     PACKAGES.find((p) => p.id === member.packageId) ||
@@ -249,6 +260,40 @@ export const MemberDashboard: React.FC<MemberDashboardProps> = ({
             <span className="text-[10px] font-bold bg-amber-200 text-amber-900 px-3 py-1 rounded-full uppercase tracking-wider font-mono shrink-0">
               Menunggu Approval
             </span>
+          </div>
+        )}
+
+        {/* Notifikasi & Indikator Visual: Hampir Jatuh Tempo (< 3 Bulan Menuju Hari Raya) */}
+        {isDueSoon && (
+          <div className="bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50/90 border-2 border-amber-400/90 rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 text-xs shadow-md animate-in fade-in">
+            <div className="flex items-start sm:items-center space-x-3.5">
+              <div className="p-2.5 bg-amber-500 text-slate-950 rounded-2xl shadow-sm shrink-0">
+                <AlertTriangle className="w-5 h-5 text-slate-950" />
+              </div>
+              <div className="space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-black text-amber-950 text-sm">
+                    Peringatan: Target Paket Belum Lunas & Hari Raya Makin Dekat!
+                  </span>
+                  <span className="bg-amber-200 text-amber-950 font-mono font-bold text-[10px] px-2.5 py-0.5 rounded-full uppercase tracking-wider border border-amber-300">
+                    Jatuh Tempo &lt; 3 Bulan (±{daysUntilDue} Hari Lagi)
+                  </span>
+                </div>
+                <p className="text-amber-900 text-xs leading-relaxed">
+                  Target paket <strong>{member.packageName}</strong> masih memiliki sisa kekurangan sebesar <strong className="font-mono text-amber-950">Rp {remaining.toLocaleString('id-ID')}</strong> ({100 - percent}% lagi). Estimasi serah terima barang pada <strong>{member.pickupDate}</strong>. Tingkatkan cicilan menjadi <strong className="font-mono">Rp {acceleratedWeeklyRate.toLocaleString('id-ID')}/minggu</strong> (atau <strong className="font-mono">Rp {acceleratedDailyRate.toLocaleString('id-ID')}/hari</strong>) agar paket Anda lunas tepat waktu dan siap diambil.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 w-full md:w-auto shrink-0 justify-end pt-1 md:pt-0">
+              <button
+                onClick={onGoToDeposit}
+                className="w-full md:w-auto px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs shadow-md transition flex items-center justify-center gap-1.5"
+              >
+                <PlusCircle className="w-4 h-4" />
+                <span>+ Percepat Setoran</span>
+              </button>
+            </div>
           </div>
         )}
 
@@ -559,16 +604,23 @@ export const MemberDashboard: React.FC<MemberDashboardProps> = ({
           <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
             <div className="flex items-center justify-between text-xs text-slate-500 mb-2">
               <span>Sisa Target Paket</span>
-              <div className="p-2 bg-amber-50 text-amber-700 rounded-lg">
+              <div className={`p-2 rounded-lg ${isDueSoon ? 'bg-amber-100 text-amber-800' : 'bg-amber-50 text-amber-700'}`}>
                 <PiggyBank className="w-4 h-4" />
               </div>
             </div>
-            <div className="text-2xl font-black text-amber-700">
+            <div className="text-2xl font-black text-amber-700 font-mono tabular-nums">
               Rp {remaining.toLocaleString('id-ID')}
             </div>
-            <div className="text-xs text-slate-400 mt-2">
-              Target total: Rp {member.packagePrice.toLocaleString('id-ID')}
-            </div>
+            {isDueSoon ? (
+              <div className="flex items-center space-x-1.5 text-[11px] text-amber-900 bg-amber-50 border border-amber-300 px-2 py-1 rounded-lg font-bold mt-2">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                <span>Hampir Jatuh Tempo (&lt; 3 Bulan)</span>
+              </div>
+            ) : (
+              <div className="text-xs text-slate-400 mt-2">
+                Target total: Rp {member.packagePrice.toLocaleString('id-ID')}
+              </div>
+            )}
           </div>
         </div>
 
@@ -745,17 +797,42 @@ export const MemberDashboard: React.FC<MemberDashboardProps> = ({
               </button>
             </div>
           ) : (
-            <div className="bg-slate-50 rounded-2xl p-4 sm:p-5 border border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className={`rounded-2xl p-4 sm:p-5 border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition ${
+              isDueSoon
+                ? 'bg-gradient-to-r from-amber-50/90 to-orange-50/70 border-amber-300 shadow-xs'
+                : 'bg-slate-50 border-slate-200'
+            }`}>
               <div className="flex items-start space-x-3">
-                <div className="p-2 bg-emerald-100 text-emerald-800 rounded-xl mt-0.5 shrink-0">
-                  <Clock className="w-4 h-4" />
+                <div className={`p-2 rounded-xl mt-0.5 shrink-0 ${
+                  isDueSoon ? 'bg-amber-200 text-amber-900' : 'bg-emerald-100 text-emerald-800'
+                }`}>
+                  {isDueSoon ? (
+                    <Hourglass className="w-4 h-4 text-amber-900" />
+                  ) : (
+                    <Clock className="w-4 h-4 text-emerald-800" />
+                  )}
                 </div>
                 <div className="text-xs text-slate-600 space-y-1">
-                  <div className="font-bold text-slate-900 text-sm">
-                    Estimasi Sisa Menuju Pelunasan: Rp {remaining.toLocaleString('id-ID')}
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-slate-900 text-sm">
+                      Estimasi Sisa Menuju Pelunasan: Rp {remaining.toLocaleString('id-ID')}
+                    </span>
+                    {isDueSoon && (
+                      <span className="bg-amber-200 text-amber-950 font-mono font-bold text-[10px] px-2 py-0.5 rounded-full border border-amber-300">
+                        Jatuh Tempo &lt; 3 Bulan
+                      </span>
+                    )}
                   </div>
                   <p className="leading-relaxed">
-                    Dengan cicilan harian <strong className="text-slate-800 font-mono">Rp {(currentPkg.dailyPayment || 2000).toLocaleString('id-ID')}/hari</strong>, target akan tuntas dalam <strong className="font-mono">± {Math.ceil(remaining / (currentPkg.dailyPayment || 2000))} hari</strong> lagi. Atau cicilan mingguan <strong className="text-slate-800 font-mono">Rp {(currentPkg.weeklyPayment || 14000).toLocaleString('id-ID')}/minggu</strong> (<strong className="font-mono">± {Math.ceil(remaining / (currentPkg.weeklyPayment || 14000))} minggu</strong>).
+                    {isDueSoon ? (
+                      <>
+                        Waktu penyerahan paket makin dekat dalam <strong className="text-amber-950">±{daysUntilDue} hari</strong> lagi. Disarankan percepat setoran menjadi <strong className="text-slate-900 font-mono">Rp {acceleratedWeeklyRate.toLocaleString('id-ID')}/minggu</strong> (atau <strong className="text-slate-900 font-mono">Rp {acceleratedDailyRate.toLocaleString('id-ID')}/hari</strong>) agar lunas sebelum Idul Fitri.
+                      </>
+                    ) : (
+                      <>
+                        Dengan cicilan harian <strong className="text-slate-800 font-mono">Rp {(currentPkg.dailyPayment || 2000).toLocaleString('id-ID')}/hari</strong>, target akan tuntas dalam <strong className="font-mono">± {Math.ceil(remaining / (currentPkg.dailyPayment || 2000))} hari</strong> lagi. Atau cicilan mingguan <strong className="text-slate-800 font-mono">Rp {(currentPkg.weeklyPayment || 14000).toLocaleString('id-ID')}/minggu</strong> (<strong className="font-mono">± {Math.ceil(remaining / (currentPkg.weeklyPayment || 14000))} minggu</strong>).
+                      </>
+                    )}
                   </p>
                 </div>
               </div>
@@ -763,10 +840,14 @@ export const MemberDashboard: React.FC<MemberDashboardProps> = ({
               <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
                 <button
                   onClick={onGoToDeposit}
-                  className="w-full sm:w-auto px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold shadow-md transition flex items-center justify-center gap-1.5"
+                  className={`w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-bold shadow-md transition flex items-center justify-center gap-1.5 ${
+                    isDueSoon
+                      ? 'bg-amber-600 hover:bg-amber-700 text-white'
+                      : 'bg-emerald-700 hover:bg-emerald-800 text-white'
+                  }`}
                 >
                   <PlusCircle className="w-4 h-4" />
-                  <span>+ Setor Tabungan</span>
+                  <span>{isDueSoon ? '+ Percepat Setoran' : '+ Setor Tabungan'}</span>
                 </button>
                 <button
                   onClick={() => onOpenPackageDetail(currentPkg)}

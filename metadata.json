@@ -1,0 +1,6 @@
+{
+  "name": "Sagitarius Parcel - Tabungan & Paket Lebaran",
+  "description": "Platform manajemen dan tabungan paket Idul Fitri multi-role untuk Member, Agen, Korwil, dan Admin Pusat.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

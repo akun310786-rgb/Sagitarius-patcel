@@ -122,10 +122,10 @@ export const AuthLoginModal: React.FC<AuthLoginModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-xs p-3 sm:p-5 overflow-y-auto animate-in fade-in duration-150">
       <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200">
         {/* Header */}
-        <div className="bg-gradient-to-r from-emerald-800 via-teal-900 to-slate-900 text-white p-5 sm:p-6 relative">
+        <div className="bg-gradient-to-r from-[#1c0836] via-[#2d0e54] to-[#150628] text-white p-5 sm:p-6 relative">
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 text-emerald-200 hover:text-white p-1.5 rounded-full hover:bg-white/10 transition"
+            className="absolute top-4 right-4 text-purple-200 hover:text-white p-1.5 rounded-full hover:bg-white/10 transition"
             aria-label="Tutup"
           >
             <X className="w-5 h-5" />
@@ -139,7 +139,7 @@ export const AuthLoginModal: React.FC<AuthLoginModalProps> = ({
           <h3 className="font-black text-xl text-white">
             Masuk ke Dashboard
           </h3>
-          <p className="text-xs text-emerald-100 mt-1">
+          <p className="text-xs text-purple-200 mt-1">
             Pilih jenis akun Anda untuk mengakses buku tabungan, laporan kemitraan agen, atau konsol admin.
           </p>
 
@@ -150,8 +150,8 @@ export const AuthLoginModal: React.FC<AuthLoginModalProps> = ({
               onClick={() => handleRoleChange('member')}
               className={`py-2 px-1 rounded-xl text-center text-xs font-bold transition flex flex-col items-center justify-center gap-1 ${
                 selectedRole === 'member'
-                  ? 'bg-amber-400 text-slate-950 shadow-md'
-                  : 'text-emerald-100 hover:bg-white/10'
+                  ? 'bg-amber-400 text-slate-950 shadow-md font-bold'
+                  : 'text-purple-200 hover:bg-white/10'
               }`}
             >
               <User className="w-4 h-4" />
@@ -163,8 +163,8 @@ export const AuthLoginModal: React.FC<AuthLoginModalProps> = ({
               onClick={() => handleRoleChange('agent')}
               className={`py-2 px-1 rounded-xl text-center text-xs font-bold transition flex flex-col items-center justify-center gap-1 ${
                 selectedRole === 'agent'
-                  ? 'bg-amber-400 text-slate-950 shadow-md'
-                  : 'text-emerald-100 hover:bg-white/10'
+                  ? 'bg-amber-400 text-slate-950 shadow-md font-bold'
+                  : 'text-purple-200 hover:bg-white/10'
               }`}
             >
               <Store className="w-4 h-4" />
@@ -176,8 +176,8 @@ export const AuthLoginModal: React.FC<AuthLoginModalProps> = ({
               onClick={() => handleRoleChange('korwil')}
               className={`py-2 px-1 rounded-xl text-center text-xs font-bold transition flex flex-col items-center justify-center gap-1 ${
                 selectedRole === 'korwil'
-                  ? 'bg-amber-400 text-slate-950 shadow-md'
-                  : 'text-emerald-100 hover:bg-white/10'
+                  ? 'bg-amber-400 text-slate-950 shadow-md font-bold'
+                  : 'text-purple-200 hover:bg-white/10'
               }`}
             >
               <MapPin className="w-4 h-4" />
@@ -189,8 +189,8 @@ export const AuthLoginModal: React.FC<AuthLoginModalProps> = ({
               onClick={() => handleRoleChange('admin')}
               className={`py-2 px-1 rounded-xl text-center text-xs font-bold transition flex flex-col items-center justify-center gap-1 ${
                 selectedRole === 'admin'
-                  ? 'bg-amber-400 text-slate-950 shadow-md'
-                  : 'text-emerald-100 hover:bg-white/10'
+                  ? 'bg-amber-400 text-slate-950 shadow-md font-bold'
+                  : 'text-purple-200 hover:bg-white/10'
               }`}
             >
               <ShieldCheck className="w-4 h-4" />
@@ -230,7 +230,7 @@ export const AuthLoginModal: React.FC<AuthLoginModalProps> = ({
                     ? 'korwil@sp.id'
                     : 'admin@sagitarius.com'
                 }
-                className="w-full px-3 py-2.5 border border-slate-300 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-emerald-500 font-medium text-xs bg-slate-50/50 text-slate-900"
+                className="w-full px-3 py-2.5 border border-slate-300 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-purple-600 font-medium text-xs bg-slate-50/50 text-slate-900"
               />
             </div>
 
@@ -244,13 +244,13 @@ export const AuthLoginModal: React.FC<AuthLoginModalProps> = ({
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Masukkan kata sandi akun Anda"
-                className="w-full px-3 py-2.5 border border-slate-300 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-emerald-500 font-medium text-xs bg-slate-50/50 text-slate-900"
+                className="w-full px-3 py-2.5 border border-slate-300 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-purple-600 font-medium text-xs bg-slate-50/50 text-slate-900"
               />
             </div>
 
             <button
               type="submit"
-              className="w-full py-3 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl text-xs shadow-md transition flex items-center justify-center gap-2"
+              className="w-full py-3 bg-gradient-to-r from-purple-800 via-indigo-800 to-purple-900 hover:from-purple-900 hover:via-indigo-900 hover:to-slate-950 text-white font-bold rounded-xl text-xs shadow-md transition flex items-center justify-center gap-2 cursor-pointer"
             >
               <Unlock className="w-4 h-4" />
               <span>
@@ -279,7 +279,7 @@ export const AuthLoginModal: React.FC<AuthLoginModalProps> = ({
                     key={m.id}
                     type="button"
                     onClick={() => handleQuickLogin('member', m.id)}
-                    className="w-full p-2.5 rounded-xl border border-slate-200 hover:border-emerald-500 bg-slate-50 hover:bg-emerald-50/60 flex items-center justify-between transition text-left"
+                    className="w-full p-2.5 rounded-xl border border-slate-200 hover:border-purple-500 bg-slate-50 hover:bg-purple-50/60 flex items-center justify-between transition text-left cursor-pointer"
                   >
                     <div>
                       <strong className="text-slate-900 block text-xs">{m.name}</strong>
@@ -287,7 +287,7 @@ export const AuthLoginModal: React.FC<AuthLoginModalProps> = ({
                         {m.email || `${m.memberCode.toLowerCase()}@member.sp`} · {m.packageName}
                       </span>
                     </div>
-                    <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-md shrink-0">
+                    <span className="text-[10px] font-bold text-purple-800 bg-purple-100 px-2 py-0.5 rounded-md shrink-0">
                       Masuk Langsung
                     </span>
                   </button>

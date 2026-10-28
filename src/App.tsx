@@ -329,7 +329,7 @@ export default function App() {
 
       {/* Authenticated Top Status Bar - Only shown when logged into an internal dashboard */}
       {currentView !== 'public' && authSession && (
-        <div className="bg-slate-900 text-white text-xs sticky top-0 z-50 border-b border-slate-800 py-2.5 px-4 shadow-md">
+        <div className="bg-gradient-to-r from-[#19072f] via-[#2a0e4f] to-[#130526] text-white text-xs sticky top-0 z-50 border-b border-purple-900/50 py-2.5 px-4 shadow-md">
           <div className="max-w-7xl mx-auto flex items-center justify-between">
             <div className="flex items-center space-x-2.5">
               <span className="bg-amber-400 text-slate-950 font-black px-1.5 py-0.5 rounded text-[10px] tracking-wider uppercase">
@@ -347,13 +347,13 @@ export default function App() {
                     ? 'Korwil Wilayah'
                     : 'Admin Pusat'}
                 </strong>
-                : <span className="text-emerald-300 font-semibold">{authSession.name}</span>
+                : <span className="text-purple-300 font-semibold">{authSession.name}</span>
               </span>
             </div>
 
             <button
               onClick={handleLogout}
-              className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-800 hover:bg-rose-950 hover:text-rose-200 text-slate-300 rounded-xl text-xs font-semibold border border-slate-700 hover:border-rose-500/50 transition shadow-xs"
+              className="flex items-center space-x-1.5 px-3 py-1.5 bg-white/10 hover:bg-rose-950 hover:text-rose-200 text-purple-200 hover:text-white rounded-xl text-xs font-semibold border border-white/15 hover:border-rose-500/50 transition shadow-xs cursor-pointer"
             >
               <span>← Keluar ke Website Publik</span>
             </button>

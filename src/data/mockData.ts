@@ -36,7 +36,7 @@ export const PACKAGES: ParcelPackage[] = [
     thrBonus: 'THR Rp 200.000',
     bonusGift: 'Travel Bag Eksklusif SP',
     weight: '± 7.5 kg',
-    imageUrl: 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=600&q=80',
+    imageUrl: '/src/assets/images/parcel_bunda_sembako_1793177821665.jpg',
     items: [
       'Travel Bag Eksklusif SP (Bonus)',
       'Uang Tunai THR Rp 200.000 (Bonus)',
@@ -67,7 +67,7 @@ export const PACKAGES: ParcelPackage[] = [
     thrBonus: 'THR Rp 350.000',
     bonusGift: 'Container Box Plastik Tebal',
     weight: '± 12.0 kg',
-    imageUrl: 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?auto=format&fit=crop&w=600&q=80',
+    imageUrl: '/src/assets/images/parcel_bunda_sembako_1793177821665.jpg',
     items: [
       'Container Box Plastik Tebal (Bonus)',
       'Uang Tunai THR Rp 350.000 (Bonus)',
@@ -104,7 +104,7 @@ export const PACKAGES: ParcelPackage[] = [
     thrBonus: 'THR Rp 600.000',
     bonusGift: 'Container Box Roda Besar',
     weight: '± 14.5 kg',
-    imageUrl: 'https://images.unsplash.com/photo-1607344645866-009c320c5ab8?auto=format&fit=crop&w=600&q=80',
+    imageUrl: '/src/assets/images/parcel_bunda_mewah_1793177824319.jpg',
     items: [
       'Container Box Roda Besar (Bonus)',
       'Uang Tunai THR Rp 600.000 (Bonus)',
@@ -137,7 +137,7 @@ export const PACKAGES: ParcelPackage[] = [
     thrBonus: 'THR Rp 800.000',
     bonusGift: 'Koper Dewasa Elegant Hardcase',
     weight: '± 11.0 kg',
-    imageUrl: 'https://images.unsplash.com/photo-1558961363-fa8fdf82db35?auto=format&fit=crop&w=600&q=80',
+    imageUrl: '/src/assets/images/parcel_bunda_mewah_1793177824319.jpg',
     items: [
       'Koper Dewasa Elegant Hardcase (Bonus)',
       'Uang Tunai THR Rp 800.000 (Bonus)',
@@ -171,7 +171,7 @@ export const PACKAGES: ParcelPackage[] = [
     thrBonus: 'THR Rp 100.000',
     bonusGift: 'Travel Bag Karakter Anak',
     weight: '± 5.0 kg',
-    imageUrl: 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=600&q=80',
+    imageUrl: '/src/assets/images/parcel_anak_snack_1793177823580.jpg',
     items: [
       'Travel Bag Karakter Anak (Bonus)',
       'Uang Saku THR Rp 100.000 (Bonus)',
@@ -209,7 +209,7 @@ export const PACKAGES: ParcelPackage[] = [
     thrBonus: 'THR Rp 300.000',
     bonusGift: 'Container Box Serbaguna',
     weight: '± 7.5 kg',
-    imageUrl: 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?auto=format&fit=crop&w=600&q=80',
+    imageUrl: '/src/assets/images/parcel_anak_snack_1793177823580.jpg',
     items: [
       'Container Box Serbaguna (Bonus)',
       'Uang Saku THR Rp 300.000 (Bonus)',
@@ -249,7 +249,7 @@ export const PACKAGES: ParcelPackage[] = [
     thrBonus: 'THR Rp 600.000',
     bonusGift: 'Koper Karakter Anak Beroda (Dino)',
     weight: '± 8.5 kg',
-    imageUrl: 'https://images.unsplash.com/photo-1607344645866-009c320c5ab8?auto=format&fit=crop&w=600&q=80',
+    imageUrl: '/src/assets/images/parcel_anak_hebat_1793177826965.jpg',
     items: [
       'Koper Karakter Anak Beroda (Dino) (Bonus)',
       'Uang Saku THR Rp 600.000 (Bonus)',
@@ -291,7 +291,7 @@ export const PACKAGES: ParcelPackage[] = [
     thrBonus: 'THR Rp 900.000',
     bonusGift: 'Koper Dewasa Hardcase Mewah',
     weight: '± 10.0 kg',
-    imageUrl: 'https://images.unsplash.com/photo-1558961363-fa8fdf82db35?auto=format&fit=crop&w=600&q=80',
+    imageUrl: '/src/assets/images/parcel_anak_hebat_1793177826965.jpg',
     items: [
       'Koper Dewasa Hardcase Mewah (Bonus)',
       'Uang Saku THR Rp 900.000 (Bonus)',
@@ -341,7 +341,7 @@ export const PACKAGES: ParcelPackage[] = [
     thrBonus: 'THR Rp 1.000.000',
     bonusGift: 'Container Box + Mukena Silky Motif',
     weight: '± 16.0 kg',
-    imageUrl: 'https://images.unsplash.com/photo-1607344645866-009c320c5ab8?auto=format&fit=crop&w=600&q=80',
+    imageUrl: '/src/assets/images/parcel_sultan_sembako_1793177825873.jpg',
     items: [
       'Container Box Roda (Bonus)',
       'Mukena Silky Motif Eksklusif (Bonus)',
@@ -379,7 +379,7 @@ export const PACKAGES: ParcelPackage[] = [
     thrBonus: 'THR Rp 2.000.000',
     bonusGift: 'Container Box Jumbo Roda',
     weight: '± 24.0 kg',
-    imageUrl: 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=600&q=80',
+    imageUrl: '/src/assets/images/parcel_sultan_sembako_1793177825873.jpg',
     items: [
       'Container Box Jumbo Roda (Bonus)',
       'Uang Tunai THR Rp 2.000.000 (Bonus)',

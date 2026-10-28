@@ -107,9 +107,9 @@ export const MemberDepositFlow: React.FC<MemberDepositFlowProps> = ({
 
       <div className="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
         {/* Step indicator */}
-        <div className="bg-slate-900 text-white p-6">
+        <div className="bg-gradient-to-r from-[#1c0836] via-[#2d0e54] to-[#150628] text-white p-6">
           <h2 className="text-xl font-bold text-amber-300">Buat Setoran Tabungan Baru</h2>
-          <p className="text-xs text-slate-300 mt-1">
+          <p className="text-xs text-purple-200 mt-1">
             Simpanan amanah untuk persiapan Paket Lebaran 2027 Idul Fitri 1448 H
           </p>
 
@@ -117,38 +117,38 @@ export const MemberDepositFlow: React.FC<MemberDepositFlowProps> = ({
             <div className="flex items-center space-x-2">
               <div
                 className={`w-7 h-7 rounded-full flex items-center justify-center font-bold ${
-                  step >= 1 ? 'bg-amber-400 text-slate-950' : 'bg-slate-700 text-slate-300'
+                  step >= 1 ? 'bg-amber-400 text-slate-950 font-bold' : 'bg-purple-900/60 text-purple-300'
                 }`}
               >
                 1
               </div>
-              <span className={step >= 1 ? 'font-semibold text-white' : 'text-slate-400'}>
+              <span className={step >= 1 ? 'font-semibold text-white' : 'text-purple-300/70'}>
                 Nominal & Metode
               </span>
             </div>
-            <div className="h-0.5 w-12 bg-slate-700 mx-2" />
+            <div className="h-0.5 w-12 bg-purple-900/60 mx-2" />
             <div className="flex items-center space-x-2">
               <div
                 className={`w-7 h-7 rounded-full flex items-center justify-center font-bold ${
-                  step >= 2 ? 'bg-amber-400 text-slate-950' : 'bg-slate-700 text-slate-300'
+                  step >= 2 ? 'bg-amber-400 text-slate-950 font-bold' : 'bg-purple-900/60 text-purple-300'
                 }`}
               >
                 2
               </div>
-              <span className={step >= 2 ? 'font-semibold text-white' : 'text-slate-400'}>
+              <span className={step >= 2 ? 'font-semibold text-white' : 'text-purple-300/70'}>
                 Pembayaran
               </span>
             </div>
-            <div className="h-0.5 w-12 bg-slate-700 mx-2" />
+            <div className="h-0.5 w-12 bg-purple-900/60 mx-2" />
             <div className="flex items-center space-x-2">
               <div
                 className={`w-7 h-7 rounded-full flex items-center justify-center font-bold ${
-                  step === 3 ? 'bg-emerald-500 text-white' : 'bg-slate-700 text-slate-300'
+                  step === 3 ? 'bg-amber-400 text-slate-950 font-bold' : 'bg-purple-900/60 text-purple-300'
                 }`}
               >
                 3
               </div>
-              <span className={step === 3 ? 'font-semibold text-white' : 'text-slate-400'}>
+              <span className={step === 3 ? 'font-semibold text-white' : 'text-purple-300/70'}>
                 Selesai
               </span>
             </div>
@@ -159,10 +159,10 @@ export const MemberDepositFlow: React.FC<MemberDepositFlowProps> = ({
         {step === 1 && (
           <div className="p-6 space-y-6">
             {/* Balance Overview */}
-            <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-200 flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div className="p-4 bg-purple-50 rounded-xl border border-purple-200 flex flex-wrap items-center justify-between gap-3 text-xs">
               <div>
                 <span className="text-slate-500 block">Total Tabungan Anda Saat Ini:</span>
-                <span className="text-lg font-black text-emerald-800">
+                <span className="text-lg font-black text-purple-900">
                   Rp {member.totalSaved.toLocaleString('id-ID')}
                 </span>
               </div>
@@ -185,9 +185,9 @@ export const MemberDepositFlow: React.FC<MemberDepositFlowProps> = ({
                     key={val}
                     type="button"
                     onClick={() => handleSelectQuick(val)}
-                    className={`py-3 px-3 rounded-xl border text-xs font-bold transition flex flex-col items-center ${
+                    className={`py-3 px-3 rounded-xl border text-xs font-bold transition flex flex-col items-center cursor-pointer ${
                       amount === val && !customAmount
-                        ? 'border-emerald-600 bg-emerald-50 text-emerald-800 ring-2 ring-emerald-500'
+                        ? 'border-purple-600 bg-purple-50 text-purple-900 ring-2 ring-purple-500'
                         : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700'
                     }`}
                   >
@@ -209,7 +209,7 @@ export const MemberDepositFlow: React.FC<MemberDepositFlowProps> = ({
                   placeholder="Contoh: 350.000"
                   value={customAmount}
                   onChange={handleCustomChange}
-                  className="w-full pl-10 pr-4 py-2.5 text-sm font-semibold border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
+                  className="w-full pl-10 pr-4 py-2.5 text-sm font-semibold border border-slate-300 rounded-xl focus:ring-2 focus:ring-purple-600 focus:outline-hidden"
                 />
               </div>
             </div>
@@ -224,7 +224,7 @@ export const MemberDepositFlow: React.FC<MemberDepositFlowProps> = ({
                   onClick={() => setMethod('Transfer Bank BRI')}
                   className={`p-3.5 rounded-xl border cursor-pointer transition flex items-center space-x-3 ${
                     method === 'Transfer Bank BRI'
-                      ? 'border-emerald-600 bg-emerald-50/70 ring-2 ring-emerald-500'
+                      ? 'border-purple-600 bg-purple-50/70 ring-2 ring-purple-500'
                       : 'border-slate-200 hover:bg-slate-50'
                   }`}
                 >
@@ -239,7 +239,7 @@ export const MemberDepositFlow: React.FC<MemberDepositFlowProps> = ({
                   onClick={() => setMethod('Transfer Bank BCA')}
                   className={`p-3.5 rounded-xl border cursor-pointer transition flex items-center space-x-3 ${
                     method === 'Transfer Bank BCA'
-                      ? 'border-emerald-600 bg-emerald-50/70 ring-2 ring-emerald-500'
+                      ? 'border-purple-600 bg-purple-50/70 ring-2 ring-purple-500'
                       : 'border-slate-200 hover:bg-slate-50'
                   }`}
                 >
@@ -254,14 +254,14 @@ export const MemberDepositFlow: React.FC<MemberDepositFlowProps> = ({
                   onClick={() => setMethod('QRIS Instant')}
                   className={`p-3.5 rounded-xl border cursor-pointer transition flex items-center space-x-3 ${
                     method === 'QRIS Instant'
-                      ? 'border-emerald-600 bg-emerald-50/70 ring-2 ring-emerald-500'
+                      ? 'border-purple-600 bg-purple-50/70 ring-2 ring-purple-500'
                       : 'border-slate-200 hover:bg-slate-50'
                   }`}
                 >
-                  <QrCode className="w-5 h-5 text-emerald-600" />
+                  <QrCode className="w-5 h-5 text-purple-700" />
                   <div className="text-xs">
                     <div className="font-bold text-slate-800">QRIS Instant (GoPay/OVO/ShopeePay)</div>
-                    <div className="text-[11px] text-emerald-700 font-medium">Verifikasi Otomatis Seketika</div>
+                    <div className="text-[11px] text-purple-800 font-medium">Verifikasi Otomatis Seketika</div>
                   </div>
                 </div>
 
@@ -269,7 +269,7 @@ export const MemberDepositFlow: React.FC<MemberDepositFlowProps> = ({
                   onClick={() => setMethod('Tunai Agen')}
                   className={`p-3.5 rounded-xl border cursor-pointer transition flex items-center space-x-3 ${
                     method === 'Tunai Agen'
-                      ? 'border-emerald-600 bg-emerald-50/70 ring-2 ring-emerald-500'
+                      ? 'border-purple-600 bg-purple-50/70 ring-2 ring-purple-500'
                       : 'border-slate-200 hover:bg-slate-50'
                   }`}
                 >
@@ -287,7 +287,7 @@ export const MemberDepositFlow: React.FC<MemberDepositFlowProps> = ({
                 type="button"
                 disabled={amount <= 0}
                 onClick={() => setStep(2)}
-                className="flex items-center space-x-2 px-6 py-2.5 bg-emerald-700 hover:bg-emerald-800 disabled:bg-slate-300 text-white text-xs font-bold rounded-xl shadow transition"
+                className="flex items-center space-x-2 px-6 py-2.5 bg-gradient-to-r from-purple-800 to-indigo-800 hover:from-purple-900 hover:to-indigo-900 disabled:bg-slate-300 text-white text-xs font-bold rounded-xl shadow transition cursor-pointer"
               >
                 <span>Lanjut ke Instruksi Pembayaran</span>
                 <ChevronRight className="w-4 h-4" />
@@ -428,7 +428,7 @@ export const MemberDepositFlow: React.FC<MemberDepositFlowProps> = ({
                 type="button"
                 disabled={isSubmitting}
                 onClick={handleSubmitDeposit}
-                className="flex items-center space-x-2 px-6 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow transition"
+                className="flex items-center space-x-2 px-6 py-2.5 bg-gradient-to-r from-purple-800 to-indigo-800 hover:from-purple-900 hover:to-indigo-900 text-white text-xs font-bold rounded-xl shadow transition cursor-pointer"
               >
                 <span>{isSubmitting ? 'Memproses Setoran...' : 'Konfirmasi & Kirim Setoran'}</span>
                 <CheckCircle2 className="w-4 h-4" />
@@ -440,7 +440,7 @@ export const MemberDepositFlow: React.FC<MemberDepositFlowProps> = ({
         {/* Step 3: Success Completed */}
         {step === 3 && (
           <div className="p-8 text-center space-y-4">
-            <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full mx-auto flex items-center justify-center">
+            <div className="w-16 h-16 bg-purple-100 text-purple-700 rounded-full mx-auto flex items-center justify-center">
               <CheckCircle2 className="w-10 h-10" />
             </div>
             <h3 className="text-xl font-bold text-slate-800">Setoran Berhasil Diajukan!</h3>
@@ -455,11 +455,11 @@ export const MemberDepositFlow: React.FC<MemberDepositFlowProps> = ({
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">Nominal:</span>
-                <span className="font-bold text-emerald-700">Rp {amount.toLocaleString('id-ID')}</span>
+                <span className="font-bold text-purple-900">Rp {amount.toLocaleString('id-ID')}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">Status Awal:</span>
-                <span className="font-bold text-emerald-600">
+                <span className="font-bold text-purple-800">
                   {method === 'QRIS Instant' ? 'Terverifikasi Seketika' : 'Menunggu Validasi Pusat'}
                 </span>
               </div>
@@ -468,7 +468,7 @@ export const MemberDepositFlow: React.FC<MemberDepositFlowProps> = ({
             <div className="flex justify-center gap-3 pt-4">
               <button
                 onClick={onBackToDashboard}
-                className="px-6 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow transition"
+                className="px-6 py-2.5 bg-gradient-to-r from-purple-800 to-indigo-800 hover:from-purple-900 hover:to-indigo-900 text-white text-xs font-bold rounded-xl shadow transition cursor-pointer"
               >
                 Buka Buku Tabungan & Dashboard
               </button>

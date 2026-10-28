@@ -23,9 +23,11 @@ export const TopSwitcher: React.FC<TopSwitcherProps> = ({
     <div className="bg-slate-900 text-white text-xs sticky top-0 z-50 shadow-md border-b border-slate-800">
       <div className="max-w-7xl mx-auto px-2 sm:px-4 py-2 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center space-x-2">
-          <span className="bg-amber-500 text-slate-950 font-bold px-1.5 py-0.5 rounded text-[10px] tracking-wider uppercase">
-            SP
-          </span>
+          <img
+            src="/assets/aistudio/file_00000000ca58820ba2ac5348f000d329_d1d25037.png"
+            alt="Sagitarius Parcel Logo"
+            className="w-6 h-6 rounded-md object-contain border border-purple-800/80 bg-black shrink-0"
+          />
           <span className="font-semibold text-amber-400 hidden sm:inline">SAGITARIUS PARCEL</span>
           <span className="text-slate-400 hidden md:inline">| Mode Pratinjau Sistem:</span>
         </div>

@@ -130,9 +130,11 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
       <nav className="bg-white/95 backdrop-blur-md border-b border-purple-100/80 sticky top-0 z-40 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600 text-slate-950 flex items-center justify-center font-black text-lg shadow-md border border-amber-300">
-              SP
-            </div>
+            <img
+              src="/assets/aistudio/file_00000000ca58820ba2ac5348f000d329_d1d25037.png"
+              alt="Sagitarius Parcel Logo"
+              className="w-11 h-11 rounded-xl object-contain shadow-md border border-purple-200/50 bg-black shrink-0"
+            />
             <div>
               <div className="font-black text-lg tracking-tight text-slate-900 leading-none">
                 SAGITARIUS PARCEL
@@ -1157,10 +1159,12 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
       <footer className="bg-[#0f041b] text-purple-300/80 text-xs pt-12 pb-8 border-t border-purple-950">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 grid grid-cols-1 md:grid-cols-4 gap-8 mb-10">
           <div className="space-y-3">
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 rounded-lg bg-amber-400 text-slate-950 font-black flex items-center justify-center text-sm">
-                SP
-              </div>
+            <div className="flex items-center space-x-3">
+              <img
+                src="/assets/aistudio/file_00000000ca58820ba2ac5348f000d329_d1d25037.png"
+                alt="Sagitarius Parcel Logo"
+                className="w-10 h-10 rounded-xl object-contain shadow-md border border-purple-800/80 bg-black shrink-0"
+              />
               <div>
                 <span className="font-bold text-white text-sm block">SAGITARIUS PARCEL</span>
                 <span className="text-[10px] text-purple-300 font-semibold">{COMPANY_INFO.name}</span>

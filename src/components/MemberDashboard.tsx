@@ -151,9 +151,11 @@ export const MemberDashboard: React.FC<MemberDashboardProps> = ({
         <div className="max-w-md w-full bg-white rounded-3xl border border-slate-200/90 shadow-xl overflow-hidden animate-in fade-in">
           {/* Card Header */}
           <div className="bg-gradient-to-r from-[#1c0836] via-[#2d0e54] to-[#150628] text-white p-6 text-center relative">
-            <div className="w-14 h-14 rounded-2xl bg-amber-400 text-slate-950 flex items-center justify-center mx-auto mb-3 shadow-md border border-amber-300">
-              <Lock className="w-7 h-7 text-purple-950" />
-            </div>
+            <img
+              src="/assets/aistudio/file_00000000ca58820ba2ac5348f000d329_d1d25037.png"
+              alt="Sagitarius Parcel Logo"
+              className="w-16 h-16 rounded-2xl object-contain mx-auto mb-3 shadow-lg border border-purple-400/30 bg-black"
+            />
             <span className="text-[10px] font-bold tracking-widest text-amber-300 uppercase block mb-1">
               PORTAL BUKU TABUNGAN DIGITAL
             </span>

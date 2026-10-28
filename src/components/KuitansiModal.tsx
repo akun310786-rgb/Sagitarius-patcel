@@ -26,9 +26,11 @@ export const KuitansiModal: React.FC<KuitansiModalProps> = ({ transaction, onClo
             <X className="w-5 h-5" />
           </button>
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-400 text-slate-900 flex items-center justify-center font-bold text-lg shadow">
-              SP
-            </div>
+            <img
+              src="/assets/aistudio/file_00000000ca58820ba2ac5348f000d329_d1d25037.png"
+              alt="Sagitarius Parcel Logo"
+              className="w-12 h-12 rounded-xl object-contain shadow-md border border-amber-400/40 bg-black shrink-0"
+            />
             <div>
               <h2 className="font-bold text-lg tracking-wide text-amber-300">SAGITARIUS PARCEL</h2>
               <p className="text-xs text-emerald-100">Buku Tabungan & Kuitansi Digital Resmi</p>

@@ -332,9 +332,11 @@ export default function App() {
         <div className="bg-gradient-to-r from-[#19072f] via-[#2a0e4f] to-[#130526] text-white text-xs sticky top-0 z-50 border-b border-purple-900/50 py-2.5 px-4 shadow-md">
           <div className="max-w-7xl mx-auto flex items-center justify-between">
             <div className="flex items-center space-x-2.5">
-              <span className="bg-amber-400 text-slate-950 font-black px-1.5 py-0.5 rounded text-[10px] tracking-wider uppercase">
-                SP
-              </span>
+              <img
+                src="/assets/aistudio/file_00000000ca58820ba2ac5348f000d329_d1d25037.png"
+                alt="Sagitarius Parcel Logo"
+                className="w-7 h-7 rounded-lg object-contain shadow-sm border border-purple-800/80 bg-black shrink-0"
+              />
               <span className="font-bold text-amber-400">SAGITARIUS PARCEL</span>
               <span className="text-slate-400 hidden sm:inline">
                 · Dashboard{' '}

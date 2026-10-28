@@ -108,10 +108,19 @@ export const MemberDepositFlow: React.FC<MemberDepositFlowProps> = ({
       <div className="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
         {/* Step indicator */}
         <div className="bg-gradient-to-r from-[#1c0836] via-[#2d0e54] to-[#150628] text-white p-6">
-          <h2 className="text-xl font-bold text-amber-300">Buat Setoran Tabungan Baru</h2>
-          <p className="text-xs text-purple-200 mt-1">
-            Simpanan amanah untuk persiapan Paket Lebaran 2027 Idul Fitri 1448 H
-          </p>
+          <div className="flex items-center space-x-3 mb-2">
+            <img
+              src="/assets/aistudio/file_00000000ca58820ba2ac5348f000d329_d1d25037.png"
+              alt="Sagitarius Parcel Logo"
+              className="w-10 h-10 rounded-xl object-contain shadow-md border border-purple-400/30 bg-black shrink-0"
+            />
+            <div>
+              <h2 className="text-xl font-bold text-amber-300">Buat Setoran Tabungan Baru</h2>
+              <p className="text-xs text-purple-200">
+                Simpanan amanah untuk persiapan Paket Lebaran 2027 Idul Fitri 1448 H
+              </p>
+            </div>
+          </div>
 
           <div className="flex items-center justify-between mt-6 max-w-md mx-auto text-xs">
             <div className="flex items-center space-x-2">

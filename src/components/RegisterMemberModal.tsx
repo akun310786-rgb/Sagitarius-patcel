@@ -94,23 +94,32 @@ export const RegisterMemberModal: React.FC<RegisterMemberModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-3 sm:p-5 overflow-y-auto animate-in fade-in duration-150">
       <div className="bg-white rounded-3xl shadow-2xl max-w-xl w-full max-h-[92vh] flex flex-col overflow-hidden border border-slate-200">
         {/* Header */}
-        <div className="bg-gradient-to-r from-emerald-800 via-teal-900 to-slate-900 text-white p-5 sm:p-6 relative shrink-0">
+        <div className="bg-gradient-to-r from-[#1c0836] via-[#2d0e54] to-[#150628] text-white p-5 sm:p-6 relative shrink-0">
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 text-emerald-200 hover:text-white p-1.5 rounded-full hover:bg-white/10 transition"
+            className="absolute top-4 right-4 text-purple-200 hover:text-white p-1.5 rounded-full hover:bg-white/10 transition"
           >
             <X className="w-5 h-5" />
           </button>
-          <div className="flex items-center space-x-2 text-amber-300 text-xs font-semibold tracking-wider uppercase mb-1">
-            <UserPlus className="w-4 h-4" />
-            <span>Pendaftaran Member Baru — Lebaran 2026/2027</span>
+          <div className="flex items-start space-x-3.5 pr-6">
+            <img
+              src="/assets/aistudio/file_00000000ca58820ba2ac5348f000d329_d1d25037.png"
+              alt="Sagitarius Parcel Logo"
+              className="w-12 h-12 rounded-xl object-contain shadow-md border border-purple-400/30 bg-black shrink-0"
+            />
+            <div>
+              <div className="flex items-center space-x-1.5 text-amber-300 text-xs font-semibold tracking-wider uppercase mb-0.5">
+                <UserPlus className="w-3.5 h-3.5" />
+                <span>Pendaftaran Member Baru — Lebaran 2026/2027</span>
+              </div>
+              <h3 className="font-black text-xl text-white">
+                Formulir Buku Tabungan Digital Sagitarius
+              </h3>
+              <p className="text-xs text-purple-200 mt-0.5">
+                Pilih paket Idul Fitri resmi flyer, hubungkan dengan outlet agen terdekat, dan mulai menabung cicilan ringan amanah.
+              </p>
+            </div>
           </div>
-          <h3 className="font-black text-xl text-white">
-            Formulir Buku Tabungan Digital Sagitarius
-          </h3>
-          <p className="text-xs text-emerald-100 mt-0.5">
-            Pilih paket Idul Fitri resmi flyer, hubungkan dengan outlet agen terdekat, dan mulai menabung cicilan ringan amanah.
-          </p>
         </div>
 
         {/* Content */}

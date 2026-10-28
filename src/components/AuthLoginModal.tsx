@@ -131,17 +131,25 @@ export const AuthLoginModal: React.FC<AuthLoginModalProps> = ({
             <X className="w-5 h-5" />
           </button>
 
-          <div className="flex items-center space-x-2 text-amber-300 text-[11px] font-bold tracking-wider uppercase mb-1">
-            <LogIn className="w-4 h-4" />
-            <span>Akses Masuk Sistem Sagitarius Parcel</span>
+          <div className="flex items-start space-x-3.5 mb-2 pr-6">
+            <img
+              src="/assets/aistudio/file_00000000ca58820ba2ac5348f000d329_d1d25037.png"
+              alt="Sagitarius Parcel Logo"
+              className="w-12 h-12 rounded-xl object-contain shadow-md border border-purple-400/30 bg-black shrink-0"
+            />
+            <div>
+              <div className="flex items-center space-x-1.5 text-amber-300 text-[11px] font-bold tracking-wider uppercase">
+                <LogIn className="w-3.5 h-3.5" />
+                <span>Portal Resmi Sagitarius Parcel</span>
+              </div>
+              <h3 className="font-black text-xl text-white leading-tight mt-0.5">
+                Masuk ke Dashboard
+              </h3>
+              <p className="text-xs text-purple-200 mt-1">
+                Pilih jenis akun Anda untuk mengakses buku tabungan, laporan kemitraan agen, atau konsol admin.
+              </p>
+            </div>
           </div>
-
-          <h3 className="font-black text-xl text-white">
-            Masuk ke Dashboard
-          </h3>
-          <p className="text-xs text-purple-200 mt-1">
-            Pilih jenis akun Anda untuk mengakses buku tabungan, laporan kemitraan agen, atau konsol admin.
-          </p>
 
           {/* Role Tabs */}
           <div className="grid grid-cols-4 gap-1.5 mt-4 p-1 bg-white/10 rounded-2xl backdrop-blur-xs border border-white/15">

@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { UserRole, Member, Transaction, ParcelPackage, Agent } from './types/parcel';
 import { ToastNotification } from './types/toast';
 import { INITIAL_MEMBERS, INITIAL_TRANSACTIONS, PACKAGES, AGENTS } from './data/mockData';
-import { TopSwitcher } from './components/TopSwitcher';
 import { PublicWebsite } from './components/PublicWebsite';
 import { MemberDashboard } from './components/MemberDashboard';
 import { MemberDepositFlow } from './components/MemberDepositFlow';
@@ -18,9 +17,12 @@ import { AgentRegistrationModal } from './components/AgentRegistrationModal';
 import { CatalogManagerModal } from './components/CatalogManagerModal';
 import { SupabaseSchemaModal } from './components/SupabaseSchemaModal';
 import { ToastContainer } from './components/ToastContainer';
+import { AuthLoginModal } from './components/AuthLoginModal';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<UserRole | 'deposit'>('public');
+  const [authSession, setAuthSession] = useState<{ role: UserRole; id?: string; name?: string } | null>(null);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState<boolean>(false);
   const [isMobileFrame, setIsMobileFrame] = useState<boolean>(false);
   const [isGuideOpen, setIsGuideOpen] = useState<boolean>(false);
 
@@ -132,6 +134,12 @@ export default function App() {
       invoiceNo: newTx.invoiceNo,
       amount
     });
+  };
+
+  // Agent quick deposit for a member
+  const handleAgentQuickDeposit = (member: Member) => {
+    setSelectedMemberId(member.id);
+    setCurrentView('deposit');
   };
 
   // Admin approves transaction
@@ -263,10 +271,51 @@ export default function App() {
     });
   };
 
-  // Quick deposit from agent row
-  const handleAgentQuickDeposit = (member: Member) => {
-    setSelectedMemberId(member.id);
-    setCurrentView('deposit');
+  // Handle Login Success from AuthLoginModal
+  const handleLoginSuccess = (role: UserRole, targetId?: string) => {
+    let userName = 'Pengguna';
+    if (role === 'member') {
+      const m = members.find((x) => x.id === targetId) || members[0];
+      setSelectedMemberId(m.id);
+      userName = m.name;
+    } else if (role === 'agent') {
+      const a = agents.find((x) => x.id === targetId) || agents[0];
+      setSelectedAgentId(a.id);
+      userName = `${a.ownerName} (${a.storeName})`;
+    } else if (role === 'korwil') {
+      userName = 'Budi Santoso (Korwil Priangan Timur)';
+    } else if (role === 'admin') {
+      userName = 'Super Admin HQ';
+    }
+
+    setAuthSession({ role, id: targetId, name: userName });
+    setCurrentView(role);
+
+    showToast({
+      title: `Selamat Datang, ${userName}! 👋`,
+      message: `Berhasil masuk ke Dashboard ${
+        role === 'member'
+          ? 'Buku Tabungan'
+          : role === 'agent'
+          ? 'Mitra Agen'
+          : role === 'korwil'
+          ? 'Korwil'
+          : 'Admin Pusat'
+      }.`,
+      type: 'success'
+    });
+  };
+
+  // Handle Logout
+  const handleLogout = () => {
+    setAuthSession(null);
+    setCurrentView('public');
+
+    showToast({
+      title: 'Berhasil Keluar',
+      message: 'Sesi akun Anda telah ditutup. Kembali ke website publik.',
+      type: 'info'
+    });
   };
 
   return (
@@ -278,18 +327,42 @@ export default function App() {
         currentRole={currentView}
       />
 
-      {/* Top Interactive Switcher matching the reference */}
-      <TopSwitcher
-        currentView={currentView}
-        onSelectView={(view) => setCurrentView(view)}
-        isMobileFrame={isMobileFrame}
-        onToggleMobileFrame={() => setIsMobileFrame((prev) => !prev)}
-        onOpenGuide={() => setIsGuideOpen(true)}
-        onSimulateIncoming={handleSimulateIncomingTransaction}
-      />
+      {/* Authenticated Top Status Bar - Only shown when logged into an internal dashboard */}
+      {currentView !== 'public' && authSession && (
+        <div className="bg-slate-900 text-white text-xs sticky top-0 z-50 border-b border-slate-800 py-2.5 px-4 shadow-md">
+          <div className="max-w-7xl mx-auto flex items-center justify-between">
+            <div className="flex items-center space-x-2.5">
+              <span className="bg-amber-400 text-slate-950 font-black px-1.5 py-0.5 rounded text-[10px] tracking-wider uppercase">
+                SP
+              </span>
+              <span className="font-bold text-amber-400">SAGITARIUS PARCEL</span>
+              <span className="text-slate-400 hidden sm:inline">
+                · Dashboard{' '}
+                <strong className="text-white uppercase">
+                  {authSession.role === 'member'
+                    ? 'Buku Tabungan'
+                    : authSession.role === 'agent'
+                    ? 'Mitra Agen'
+                    : authSession.role === 'korwil'
+                    ? 'Korwil Wilayah'
+                    : 'Admin Pusat'}
+                </strong>
+                : <span className="text-emerald-300 font-semibold">{authSession.name}</span>
+              </span>
+            </div>
+
+            <button
+              onClick={handleLogout}
+              className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-800 hover:bg-rose-950 hover:text-rose-200 text-slate-300 rounded-xl text-xs font-semibold border border-slate-700 hover:border-rose-500/50 transition shadow-xs"
+            >
+              <span>← Keluar ke Website Publik</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Main Container or Mobile Frame Wrapper */}
-      <main className={isMobileFrame ? 'py-8 flex justify-center bg-slate-900 min-h-[calc(100vh-45px)]' : 'min-h-[calc(100vh-45px)]'}>
+      <main className={isMobileFrame ? 'py-8 flex justify-center bg-slate-900 min-h-screen' : 'min-h-screen'}>
         <div
           className={
             isMobileFrame
@@ -302,8 +375,14 @@ export default function App() {
             <PublicWebsite
               packages={packages}
               agents={agents}
-              onGoToMember={() => setCurrentView('member')}
-              onGoToDeposit={() => setCurrentView('deposit')}
+              onOpenLogin={() => setIsLoginModalOpen(true)}
+              onGoToDeposit={() => {
+                if (authSession?.role === 'member') {
+                  setCurrentView('deposit');
+                } else {
+                  setIsLoginModalOpen(true);
+                }
+              }}
               onOpenRegister={(pkgId) => {
                 setRegisterPackageId(pkgId);
                 setIsRegisterModalOpen(true);
@@ -314,16 +393,43 @@ export default function App() {
           )}
 
           {currentView === 'member' && (
-            <MemberDashboard
-              member={activeMember}
-              transactions={transactions.filter((t) => t.memberId === activeMember.id)}
-              onGoToDeposit={() => setCurrentView('deposit')}
-              onOpenQR={() => setQrMember(activeMember)}
-              onViewKuitansi={(tx) => setKuitansiTx(tx)}
-              onOpenPackageDetail={(pkg) => setPackageDetailModal(pkg)}
-              allMembers={members}
-              onSelectMember={(id) => setSelectedMemberId(id)}
-            />
+            authSession?.role === 'member' ? (
+              <MemberDashboard
+                member={activeMember}
+                transactions={transactions.filter((t) => t.memberId === activeMember.id)}
+                onGoToDeposit={() => setCurrentView('deposit')}
+                onOpenQR={() => setQrMember(activeMember)}
+                onViewKuitansi={(tx) => setKuitansiTx(tx)}
+                onOpenPackageDetail={(pkg) => setPackageDetailModal(pkg)}
+                allMembers={members}
+                onSelectMember={(id) => setSelectedMemberId(id)}
+                onLogout={handleLogout}
+              />
+            ) : (
+              <div className="min-h-screen bg-slate-100 flex items-center justify-center p-6 text-center">
+                <div className="bg-white p-8 rounded-3xl shadow-xl max-w-md w-full border border-slate-200 space-y-4">
+                  <div className="w-14 h-14 bg-amber-100 text-amber-800 rounded-2xl flex items-center justify-center mx-auto text-xl font-bold">
+                    🔒
+                  </div>
+                  <h3 className="text-xl font-bold text-slate-900">Perlu Login Member</h3>
+                  <p className="text-xs text-slate-600">
+                    Silakan masukkan email/username dan password Anda terlebih dahulu untuk membuka buku tabungan digital.
+                  </p>
+                  <button
+                    onClick={() => setIsLoginModalOpen(true)}
+                    className="w-full py-3 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl text-xs transition shadow-md"
+                  >
+                    Masuk Sekarang
+                  </button>
+                  <button
+                    onClick={() => setCurrentView('public')}
+                    className="w-full py-2.5 text-slate-500 hover:text-slate-800 text-xs font-semibold"
+                  >
+                    Kembali ke Website
+                  </button>
+                </div>
+              </div>
+            )
           )}
 
           {currentView === 'deposit' && (
@@ -335,79 +441,173 @@ export default function App() {
           )}
 
           {currentView === 'agent' && (
-            <AgentDashboard
-              members={members}
-              agents={agents}
-              activeAgentId={selectedAgentId}
-              onSelectAgent={(id) => setSelectedAgentId(id)}
-              onOpenRegister={() => setIsRegisterModalOpen(true)}
-              onOpenScan={() => setIsScanModalOpen(true)}
-              onOpenQuickDeposit={handleAgentQuickDeposit}
-              onOpenQR={(m) => setQrMember(m)}
-              onOpenCommissionSimulator={() => setIsAgentRegModalOpen(true)}
-            />
+            authSession?.role === 'agent' ? (
+              <AgentDashboard
+                members={members}
+                agents={agents}
+                activeAgentId={selectedAgentId}
+                onSelectAgent={(id) => setSelectedAgentId(id)}
+                onOpenRegister={() => setIsRegisterModalOpen(true)}
+                onOpenScan={() => setIsScanModalOpen(true)}
+                onOpenQuickDeposit={handleAgentQuickDeposit}
+                onOpenQR={(m) => setQrMember(m)}
+                onOpenCommissionSimulator={() => setIsAgentRegModalOpen(true)}
+                onLogout={handleLogout}
+              />
+            ) : (
+              <div className="min-h-screen bg-slate-100 flex items-center justify-center p-6 text-center">
+                <div className="bg-white p-8 rounded-3xl shadow-xl max-w-md w-full border border-slate-200 space-y-4">
+                  <div className="w-14 h-14 bg-blue-100 text-blue-800 rounded-2xl flex items-center justify-center mx-auto text-xl font-bold">
+                    🏪
+                  </div>
+                  <h3 className="text-xl font-bold text-slate-900">Perlu Login Mitra Agen</h3>
+                  <p className="text-xs text-slate-600">
+                    Silakan masukkan kode agen atau nomor WhatsApp toko Anda untuk membuka portal agen.
+                  </p>
+                  <button
+                    onClick={() => setIsLoginModalOpen(true)}
+                    className="w-full py-3 bg-blue-700 hover:bg-blue-800 text-white font-bold rounded-xl text-xs transition shadow-md"
+                  >
+                    Masuk Mitra Agen
+                  </button>
+                  <button
+                    onClick={() => setCurrentView('public')}
+                    className="w-full py-2.5 text-slate-500 hover:text-slate-800 text-xs font-semibold"
+                  >
+                    Kembali ke Website
+                  </button>
+                </div>
+              </div>
+            )
           )}
 
           {currentView === 'korwil' && (
-            <KorwilDashboard
-              agents={agents}
-              pendingTransactions={transactions.filter((t) => t.status === 'Menunggu')}
-              onVerifyKorwil={handleVerifyKorwil}
-              onOpenAgentRegister={() => setIsAgentRegModalOpen(true)}
-            />
+            authSession?.role === 'korwil' ? (
+              <KorwilDashboard
+                agents={agents}
+                pendingTransactions={transactions.filter((t) => t.status === 'Menunggu')}
+                onVerifyKorwil={handleVerifyKorwil}
+                onOpenAgentRegister={() => setIsAgentRegModalOpen(true)}
+                onLogout={handleLogout}
+              />
+            ) : (
+              <div className="min-h-screen bg-slate-100 flex items-center justify-center p-6 text-center">
+                <div className="bg-white p-8 rounded-3xl shadow-xl max-w-md w-full border border-slate-200 space-y-4">
+                  <div className="w-14 h-14 bg-purple-100 text-purple-800 rounded-2xl flex items-center justify-center mx-auto text-xl font-bold">
+                    📍
+                  </div>
+                  <h3 className="text-xl font-bold text-slate-900">Perlu Login Korwil</h3>
+                  <p className="text-xs text-slate-600">
+                    Silakan masukkan akun koordinator wilayah Anda untuk memvalidasi transaksi regional.
+                  </p>
+                  <button
+                    onClick={() => setIsLoginModalOpen(true)}
+                    className="w-full py-3 bg-purple-700 hover:bg-purple-800 text-white font-bold rounded-xl text-xs transition shadow-md"
+                  >
+                    Masuk Korwil
+                  </button>
+                  <button
+                    onClick={() => setCurrentView('public')}
+                    className="w-full py-2.5 text-slate-500 hover:text-slate-800 text-xs font-semibold"
+                  >
+                    Kembali ke Website
+                  </button>
+                </div>
+              </div>
+            )
           )}
 
           {currentView === 'admin' && (
-            <AdminDashboard
-              transactions={transactions}
-              packages={packages}
-              agents={agents}
-              members={members}
-              onApproveTransaction={handleApproveTransaction}
-              onRejectTransaction={handleRejectTransaction}
-              onViewKuitansi={(tx) => setKuitansiTx(tx)}
-              onOpenCatalogManager={() => setIsCatalogModalOpen(true)}
-              onOpenSupabaseConsole={() => setIsSupabaseModalOpen(true)}
-              onOpenAgentRegistration={() => setIsAgentRegModalOpen(true)}
-            />
+            authSession?.role === 'admin' ? (
+              <AdminDashboard
+                transactions={transactions}
+                packages={packages}
+                agents={agents}
+                members={members}
+                onApproveTransaction={handleApproveTransaction}
+                onRejectTransaction={handleRejectTransaction}
+                onViewKuitansi={(tx) => setKuitansiTx(tx)}
+                onOpenCatalogManager={() => setIsCatalogModalOpen(true)}
+                onOpenSupabaseConsole={() => setIsSupabaseModalOpen(true)}
+                onOpenAgentRegistration={() => setIsAgentRegModalOpen(true)}
+                onLogout={handleLogout}
+              />
+            ) : (
+              <div className="min-h-screen bg-slate-100 flex items-center justify-center p-6 text-center">
+                <div className="bg-white p-8 rounded-3xl shadow-xl max-w-md w-full border border-slate-200 space-y-4">
+                  <div className="w-14 h-14 bg-rose-100 text-rose-800 rounded-2xl flex items-center justify-center mx-auto text-xl font-bold">
+                    🛡️
+                  </div>
+                  <h3 className="text-xl font-bold text-slate-900">Perlu Login Super Admin</h3>
+                  <p className="text-xs text-slate-600">
+                    Akses terbatas untuk tim manajemen pusat PT. Sagitarius Trinunggal Karya.
+                  </p>
+                  <button
+                    onClick={() => setIsLoginModalOpen(true)}
+                    className="w-full py-3 bg-rose-700 hover:bg-rose-800 text-white font-bold rounded-xl text-xs transition shadow-md"
+                  >
+                    Masuk Super Admin
+                  </button>
+                  <button
+                    onClick={() => setCurrentView('public')}
+                    className="w-full py-2.5 text-slate-500 hover:text-slate-800 text-xs font-semibold"
+                  >
+                    Kembali ke Website
+                  </button>
+                </div>
+              </div>
+            )
           )}
         </div>
       </main>
 
-      {/* Floating System Tools Quick-Access */}
-      <div className="fixed bottom-4 right-4 z-40 flex flex-col sm:flex-row items-end sm:items-center gap-2">
-        <button
-          onClick={() => setIsCatalogModalOpen(true)}
-          className="flex items-center space-x-1.5 bg-emerald-700 hover:bg-emerald-600 text-white font-bold px-3.5 py-2 rounded-full shadow-xl transition transform hover:scale-105 border border-emerald-500/50 text-xs"
-        >
-          <span>📦</span>
-          <span>Kelola Katalog</span>
-        </button>
+      {/* Floating System Tools Quick-Access (Hanya Tampil untuk Super Admin) */}
+      {authSession?.role === 'admin' && (
+        <div className="fixed bottom-4 right-4 z-40 flex flex-col sm:flex-row items-end sm:items-center gap-2">
+          <button
+            onClick={() => setIsCatalogModalOpen(true)}
+            className="flex items-center space-x-1.5 bg-emerald-700 hover:bg-emerald-600 text-white font-bold px-3.5 py-2 rounded-full shadow-xl transition transform hover:scale-105 border border-emerald-500/50 text-xs"
+          >
+            <span>📦</span>
+            <span>Kelola Katalog</span>
+          </button>
 
-        <button
-          onClick={() => setIsAgentRegModalOpen(true)}
-          className="flex items-center space-x-1.5 bg-blue-700 hover:bg-blue-600 text-white font-bold px-3.5 py-2 rounded-full shadow-xl transition transform hover:scale-105 border border-blue-500/50 text-xs"
-        >
-          <span>🏪</span>
-          <span>Portal Agen & Komisi</span>
-        </button>
+          <button
+            onClick={() => setIsAgentRegModalOpen(true)}
+            className="flex items-center space-x-1.5 bg-blue-700 hover:bg-blue-600 text-white font-bold px-3.5 py-2 rounded-full shadow-xl transition transform hover:scale-105 border border-blue-500/50 text-xs"
+          >
+            <span>🏪</span>
+            <span>Portal Agen & Komisi</span>
+          </button>
 
-        <button
-          onClick={() => setIsSupabaseModalOpen(true)}
-          className="flex items-center space-x-1.5 bg-slate-900 hover:bg-slate-800 text-emerald-400 font-bold px-3.5 py-2 rounded-full shadow-xl transition transform hover:scale-105 border border-emerald-500/40 text-xs"
-        >
-          <span>⚡</span>
-          <span>Supabase Cloud DB</span>
-        </button>
+          <button
+            onClick={() => setIsSupabaseModalOpen(true)}
+            className="flex items-center space-x-1.5 bg-slate-900 hover:bg-slate-800 text-emerald-400 font-bold px-3.5 py-2 rounded-full shadow-xl transition transform hover:scale-105 border border-emerald-500/40 text-xs"
+          >
+            <span>⚡</span>
+            <span>Supabase Cloud DB</span>
+          </button>
 
-        <button
-          onClick={() => setIsGuideOpen(true)}
-          className="flex items-center space-x-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold px-3.5 py-2 rounded-full shadow-2xl transition transform hover:scale-105 border-2 border-white/40 text-xs"
-        >
-          <span>📋</span>
-          <span>Panduan Bisnis</span>
-        </button>
-      </div>
+          <button
+            onClick={() => setIsGuideOpen(true)}
+            className="flex items-center space-x-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold px-3.5 py-2 rounded-full shadow-2xl transition transform hover:scale-105 border-2 border-white/40 text-xs"
+          >
+            <span>📋</span>
+            <span>Panduan Bisnis</span>
+          </button>
+        </div>
+      )}
+
+      {/* Auth Login Modal */}
+      {isLoginModalOpen && (
+        <AuthLoginModal
+          onClose={() => setIsLoginModalOpen(false)}
+          onLoginSuccess={handleLoginSuccess}
+          members={members}
+          agents={agents}
+          initialRole={currentView === 'public' || currentView === 'deposit' ? 'member' : currentView}
+        />
+      )}
 
       {/* Modals */}
       {kuitansiTx && (

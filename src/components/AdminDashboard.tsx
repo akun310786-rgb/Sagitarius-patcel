@@ -27,7 +27,8 @@ import {
   Layers,
   CreditCard,
   Building2,
-  UserPlus
+  UserPlus,
+  LogOut
 } from 'lucide-react';
 
 interface AdminDashboardProps {
@@ -41,6 +42,7 @@ interface AdminDashboardProps {
   onOpenCatalogManager: () => void;
   onOpenSupabaseConsole: () => void;
   onOpenAgentRegistration?: () => void;
+  onLogout?: () => void;
 }
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({
@@ -53,7 +55,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onViewKuitansi,
   onOpenCatalogManager,
   onOpenSupabaseConsole,
-  onOpenAgentRegistration
+  onOpenAgentRegistration,
+  onLogout
 }) => {
   const [adminTab, setAdminTab] = useState<'transaksi' | 'katalog' | 'agen' | 'logistik'>('transaksi');
   const [searchTerm, setSearchTerm] = useState('');
@@ -148,6 +151,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <Download className="w-4 h-4 text-amber-400" />
               <span>Export CSV</span>
             </button>
+
+            {onLogout && (
+              <button
+                onClick={onLogout}
+                className="flex items-center space-x-1.5 px-3.5 py-2.5 bg-slate-100 hover:bg-rose-50 hover:text-rose-700 text-slate-700 rounded-xl text-xs font-bold border border-slate-200 transition"
+                title="Keluar dari Dashboard Admin"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Keluar</span>
+              </button>
+            )}
           </div>
         </div>
 

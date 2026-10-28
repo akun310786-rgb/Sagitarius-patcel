@@ -40,6 +40,7 @@ interface MemberDashboardProps {
   onOpenPackageDetail: (pkg: ParcelPackage) => void;
   allMembers?: Member[];
   onSelectMember?: (memberId: string) => void;
+  onLogout?: () => void;
 }
 
 export const MemberDashboard: React.FC<MemberDashboardProps> = ({
@@ -50,7 +51,8 @@ export const MemberDashboard: React.FC<MemberDashboardProps> = ({
   onViewKuitansi,
   onOpenPackageDetail,
   allMembers = [],
-  onSelectMember
+  onSelectMember,
+  onLogout
 }) => {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(true);
   const [loginIdentifier, setLoginIdentifier] = useState<string>('');
@@ -339,7 +341,13 @@ export const MemberDashboard: React.FC<MemberDashboardProps> = ({
             )}
 
             <button
-              onClick={() => setIsLoggedIn(false)}
+              onClick={() => {
+                if (onLogout) {
+                  onLogout();
+                } else {
+                  setIsLoggedIn(false);
+                }
+              }}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-rose-50 hover:text-rose-700 text-slate-600 text-xs font-semibold rounded-xl border border-slate-200 transition"
               title="Kunci Akses / Logout Akun"
             >

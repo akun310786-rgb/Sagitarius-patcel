@@ -12,7 +12,8 @@ import {
   AlertCircle,
   FileCheck2,
   TrendingUp,
-  Check
+  Check,
+  LogOut
 } from 'lucide-react';
 
 interface KorwilDashboardProps {
@@ -20,13 +21,15 @@ interface KorwilDashboardProps {
   onVerifyKorwil: (txId: string) => void;
   agents?: Agent[];
   onOpenAgentRegister?: () => void;
+  onLogout?: () => void;
 }
 
 export const KorwilDashboard: React.FC<KorwilDashboardProps> = ({
   pendingTransactions,
   onVerifyKorwil,
   agents = AGENTS,
-  onOpenAgentRegister
+  onOpenAgentRegister,
+  onLogout
 }) => {
   const allAgents = agents && agents.length > 0 ? agents : AGENTS;
   const [verifiedList, setVerifiedList] = useState<string[]>([]);
@@ -77,13 +80,25 @@ export const KorwilDashboard: React.FC<KorwilDashboardProps> = ({
             </div>
           </div>
 
-          <button
-            onClick={handleExport}
-            className="flex items-center space-x-2 px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-xs transition"
-          >
-            <Download className="w-4 h-4 text-purple-300" />
-            <span>Export Laporan Wilayah</span>
-          </button>
+          <div className="flex items-center gap-2">
+            {onLogout && (
+              <button
+                onClick={onLogout}
+                className="flex items-center space-x-1.5 px-3 py-2.5 bg-slate-100 hover:bg-rose-50 hover:text-rose-700 text-slate-700 font-semibold text-xs rounded-xl border border-slate-200 transition"
+                title="Keluar dari Dashboard Korwil"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Keluar</span>
+              </button>
+            )}
+            <button
+              onClick={handleExport}
+              className="flex items-center space-x-2 px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-xs transition"
+            >
+              <Download className="w-4 h-4 text-purple-300" />
+              <span>Export Laporan Wilayah</span>
+            </button>
+          </div>
         </div>
 
         {/* 4 Summary KPI Cards */}

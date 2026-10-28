@@ -22,13 +22,14 @@ import {
   Trophy,
   Banknote,
   Clock,
-  Filter
+  Filter,
+  LogIn
 } from 'lucide-react';
 
 interface PublicWebsiteProps {
   packages: ParcelPackage[];
   agents: Agent[];
-  onGoToMember: () => void;
+  onOpenLogin: () => void;
   onGoToDeposit: () => void;
   onOpenRegister: (packageId?: string) => void;
   onOpenGuide: () => void;
@@ -38,7 +39,7 @@ interface PublicWebsiteProps {
 export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
   packages,
   agents,
-  onGoToMember,
+  onOpenLogin,
   onGoToDeposit,
   onOpenRegister,
   onOpenGuide,
@@ -126,7 +127,7 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
       </div>
 
       {/* Main Navbar */}
-      <nav className="bg-white border-b border-slate-200 sticky top-10 z-40 shadow-xs">
+      <nav className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-amber-500 text-slate-950 flex items-center justify-center font-black text-lg shadow-md border border-amber-300">
@@ -169,10 +170,11 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
 
           <div className="flex items-center space-x-2">
             <button
-              onClick={onGoToMember}
-              className="px-3.5 py-2 border border-slate-300 hover:border-slate-400 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 transition"
+              onClick={onOpenLogin}
+              className="px-4 py-2 border border-emerald-700/80 hover:border-emerald-800 text-emerald-800 hover:text-emerald-900 rounded-xl text-xs font-bold hover:bg-emerald-50 transition shadow-xs flex items-center gap-1.5"
             >
-              Login Portal
+              <LogIn className="w-3.5 h-3.5" />
+              <span>Masuk</span>
             </button>
             <button
               onClick={() => onOpenRegister()}
@@ -955,10 +957,10 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
               Daftar Sekarang Gratis
             </button>
             <button
-              onClick={onGoToMember}
+              onClick={onOpenLogin}
               className="px-6 py-3 bg-amber-200 hover:bg-white text-slate-900 font-bold text-xs rounded-xl shadow transition"
             >
-              Buka Demo Member
+              Masuk ke Akun
             </button>
           </div>
         </div>

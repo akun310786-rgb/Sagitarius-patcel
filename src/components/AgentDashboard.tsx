@@ -16,7 +16,8 @@ import {
   Calendar,
   Eye,
   Check,
-  ArrowUpRight
+  ArrowUpRight,
+  LogOut
 } from 'lucide-react';
 
 interface AgentDashboardProps {
@@ -29,6 +30,7 @@ interface AgentDashboardProps {
   agents?: Agent[];
   activeAgentId?: string;
   onSelectAgent?: (agentId: string) => void;
+  onLogout?: () => void;
 }
 
 export const AgentDashboard: React.FC<AgentDashboardProps> = ({
@@ -40,7 +42,8 @@ export const AgentDashboard: React.FC<AgentDashboardProps> = ({
   onOpenCommissionSimulator,
   agents = AGENTS,
   activeAgentId,
-  onSelectAgent
+  onSelectAgent,
+  onLogout
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'Aktif' | 'Lunas'>('all');
@@ -105,6 +108,17 @@ export const AgentDashboard: React.FC<AgentDashboardProps> = ({
                   ))}
                 </select>
               </div>
+            )}
+
+            {onLogout && (
+              <button
+                onClick={onLogout}
+                className="flex items-center space-x-1.5 px-3 py-2 bg-slate-100 hover:bg-rose-50 hover:text-rose-700 text-slate-700 font-semibold text-xs rounded-xl border border-slate-200 transition"
+                title="Keluar dari Dashboard Agen"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Keluar</span>
+              </button>
             )}
 
             <button

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { ParcelPackage } from '../types/parcel';
 import {
   X,
@@ -12,7 +12,12 @@ import {
   Scale,
   Sparkles,
   ArrowRight,
-  PlusCircle
+  PlusCircle,
+  Upload,
+  Image,
+  Link,
+  Camera,
+  FolderOpen
 } from 'lucide-react';
 
 interface CatalogManagerModalProps {
@@ -54,6 +59,32 @@ export const CatalogManagerModal: React.FC<CatalogManagerModalProps> = ({
 
   const [notificationMsg, setNotificationMsg] = useState<string>('');
 
+  // Image upload from file / gallery state
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [imageUploadMode, setImageUploadMode] = useState<'file' | 'url'>('file');
+  const [uploadedFileName, setUploadedFileName] = useState<string>('');
+
+  const handleImageFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Mohon pilih file gambar yang valid (JPG, PNG, WEBP, GIF).');
+      return;
+    }
+
+    setUploadedFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const result = event.target?.result as string;
+      if (result) {
+        setImageUrl(result);
+        setNotificationMsg(`Foto "${file.name}" berhasil diambil dari perangkat!`);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   // Switch selected package
   const handleSelectPackage = (pkg: ParcelPackage) => {
     setIsCreatingNew(false);
@@ -71,6 +102,7 @@ export const CatalogManagerModal: React.FC<CatalogManagerModalProps> = ({
     setDurationDays(pkg.durationDays || 325);
     setWeight(pkg.weight);
     setImageUrl(pkg.imageUrl);
+    setUploadedFileName('');
     setItems([...pkg.items]);
     setNotificationMsg('');
   };
@@ -371,27 +403,164 @@ export const CatalogManagerModal: React.FC<CatalogManagerModalProps> = ({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Badge / Tag Promo</label>
-                    <input
-                      type="text"
-                      placeholder="TERFAVORIT KELUARGA"
-                      value={tag}
-                      onChange={(e) => setTag(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white font-bold text-amber-700"
-                    />
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Badge / Tag Promo</label>
+                  <input
+                    type="text"
+                    placeholder="TERFAVORIT KELUARGA"
+                    value={tag}
+                    onChange={(e) => setTag(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white font-bold text-amber-700"
+                  />
+                </div>
+
+                {/* Banner Photo Selector with Computer/Mobile Gallery Upload & URL Support */}
+                <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-emerald-200/80 bg-linear-to-b from-emerald-50/30 to-white space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <label className="block font-bold text-slate-900 text-xs flex items-center gap-1.5">
+                      <Image className="w-4 h-4 text-emerald-600" />
+                      <span>Foto Banner Paket (Pilih dari HP, Komputer, atau URL)</span>
+                    </label>
+
+                    {/* Mode Toggle */}
+                    <div className="flex items-center bg-slate-100 p-1 rounded-xl text-[11px] font-bold border border-slate-200">
+                      <button
+                        type="button"
+                        onClick={() => setImageUploadMode('file')}
+                        className={`flex items-center space-x-1 px-3 py-1 rounded-lg transition ${
+                          imageUploadMode === 'file'
+                            ? 'bg-emerald-700 text-white shadow-xs'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        <Upload className="w-3.5 h-3.5" />
+                        <span>Ambil dari File / Galeri</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setImageUploadMode('url')}
+                        className={`flex items-center space-x-1 px-3 py-1 rounded-lg transition ${
+                          imageUploadMode === 'url'
+                            ? 'bg-emerald-700 text-white shadow-xs'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        <Link className="w-3.5 h-3.5" />
+                        <span>Ketik URL Link</span>
+                      </button>
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Foto Banner Paket (URL)</label>
-                    <input
-                      type="text"
-                      value={imageUrl}
-                      onChange={(e) => setImageUrl(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white font-mono text-[11px]"
-                    />
-                  </div>
+                  {/* Hidden Native File Input */}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageFileUpload}
+                    className="hidden"
+                  />
+
+                  {imageUploadMode === 'file' ? (
+                    <div className="space-y-2">
+                      <div
+                        onClick={() => fileInputRef.current?.click()}
+                        className="border-2 border-dashed border-emerald-300 hover:border-emerald-600 bg-emerald-50/40 hover:bg-emerald-50/80 rounded-2xl p-4 sm:p-5 text-center cursor-pointer transition group"
+                      >
+                        <div className="mx-auto w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center mb-2 group-hover:scale-110 transition shadow-xs">
+                          <Upload className="w-6 h-6" />
+                        </div>
+                        <h5 className="font-bold text-slate-800 text-xs sm:text-sm flex items-center justify-center gap-1.5">
+                          <span>Klik untuk Pilih Foto dari File atau Galeri</span>
+                        </h5>
+                        <p className="text-[11px] text-slate-500 mt-1 max-w-md mx-auto">
+                          Mendukung upload langsung dari <strong>Galeri Foto HP / Kamera Smartphone</strong> maupun folder komputer (JPG, PNG, WebP).
+                        </p>
+                        <div className="mt-2.5 inline-flex items-center gap-2 px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-xs transition">
+                          <FolderOpen className="w-3.5 h-3.5" />
+                          <span>Pilih Foto dari Perangkat</span>
+                        </div>
+                      </div>
+                      {uploadedFileName && (
+                        <div className="flex items-center justify-between p-2.5 bg-emerald-100/70 border border-emerald-300 rounded-xl text-xs text-emerald-900">
+                          <span className="flex items-center gap-1.5 font-medium truncate">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                            <span className="truncate">File terpilih: <strong>{uploadedFileName}</strong></span>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => fileInputRef.current?.click()}
+                            className="font-bold underline text-emerald-800 hover:text-emerald-950 shrink-0 ml-2"
+                          >
+                            Ganti
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      <input
+                        type="text"
+                        placeholder="https://images.unsplash.com/... atau URL gambar lainnya"
+                        value={imageUrl}
+                        onChange={(e) => setImageUrl(e.target.value)}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white font-mono text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
+                      />
+                      <p className="text-[10px] text-slate-500">
+                        Masukkan tautan langsung gambar (diawali http:// atau https://).
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Image Preview & Details */}
+                  {imageUrl && (
+                    <div className="flex items-center gap-3.5 p-3 bg-white rounded-xl border border-slate-200 shadow-2xs">
+                      <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden bg-slate-900 shrink-0 border border-slate-300 shadow-xs">
+                        <img
+                          src={imageUrl}
+                          alt="Preview Banner Paket"
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src =
+                              'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=600&q=80';
+                          }}
+                        />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="inline-block text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded">
+                            Foto Aktif Paket
+                          </span>
+                          <span className="text-[10px] text-slate-400">
+                            {imageUrl.startsWith('data:') ? 'Unggahan Perangkat' : 'Tautan URL'}
+                          </span>
+                        </div>
+                        <p className="text-xs font-semibold text-slate-700 truncate mt-1">
+                          {uploadedFileName || imageUrl}
+                        </p>
+                        <div className="flex items-center gap-3 mt-1.5">
+                          <button
+                            type="button"
+                            onClick={() => fileInputRef.current?.click()}
+                            className="text-[11px] font-bold text-emerald-700 hover:text-emerald-900 underline flex items-center gap-1"
+                          >
+                            <Camera className="w-3 h-3" />
+                            <span>Ganti Foto</span>
+                          </button>
+                          <span className="text-slate-300">•</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setImageUrl('');
+                              setUploadedFileName('');
+                            }}
+                            className="text-[11px] font-bold text-rose-600 hover:text-rose-800 underline"
+                          >
+                            Hapus Foto
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div>

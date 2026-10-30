@@ -139,9 +139,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <button
               onClick={onOpenSupabaseConsole}
               className="flex items-center space-x-1.5 px-3.5 py-2.5 bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-500/30 rounded-xl text-xs font-bold shadow-xs transition"
+              title="Lihat Struktur & Status Database PostgreSQL"
             >
               <Database className="w-4 h-4" />
-              <span>Supabase Cloud DB</span>
+              <span>Lihat Database</span>
             </button>
 
             <button

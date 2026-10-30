@@ -585,9 +585,10 @@ export default function App() {
           <button
             onClick={() => setIsSupabaseModalOpen(true)}
             className="flex items-center space-x-1.5 bg-slate-900 hover:bg-slate-800 text-emerald-400 font-bold px-3.5 py-2 rounded-full shadow-xl transition transform hover:scale-105 border border-emerald-500/40 text-xs"
+            title="Lihat Database PostgreSQL"
           >
             <span>⚡</span>
-            <span>Supabase Cloud DB</span>
+            <span>Lihat Database</span>
           </button>
 
           <button

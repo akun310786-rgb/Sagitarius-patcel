@@ -31,7 +31,9 @@ import {
   Pause,
   LayoutGrid,
   Layers,
-  Eye
+  Eye,
+  Menu,
+  X
 } from 'lucide-react';
 
 interface PublicWebsiteProps {
@@ -69,6 +71,7 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
   const [currentSlide, setCurrentSlide] = useState<number>(0);
   const [isAutoplay, setIsAutoplay] = useState<boolean>(true);
   const [catalogViewMode, setCatalogViewMode] = useState<'slide' | 'grid'>('slide');
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState<boolean>(false);
 
   const filteredPackages =
     selectedCategory === 'all'
@@ -162,65 +165,213 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
       </div>
 
       {/* Main Navbar */}
-      <nav className="bg-white/95 backdrop-blur-md border-b border-purple-100/80 sticky top-0 z-40 shadow-xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between">
+      <nav className="bg-[#120422]/95 backdrop-blur-md border-b border-purple-800/60 sticky top-0 z-40 shadow-xl px-2 sm:px-4 py-1.5">
+        <div className="max-w-7xl mx-auto px-3.5 sm:px-5 py-2.5 flex items-center justify-between bg-gradient-to-r from-[#1b0736] via-[#2a0d50] to-[#180530] text-white rounded-2xl border border-purple-500/40 shadow-lg">
+          {/* Logo & Brand Identity */}
           <div className="flex items-center space-x-3">
             <img
               src="/assets/aistudio/file_00000000ca58820ba2ac5348f000d329_d1d25037.png"
               alt="Sagitarius Parcel Logo"
-              className="w-11 h-11 rounded-xl object-contain shadow-md border border-purple-200/50 bg-black shrink-0"
+              className="w-11 h-11 rounded-xl object-contain shadow-md border border-amber-400/50 bg-black shrink-0"
             />
             <div>
-              <div className="font-black text-lg tracking-tight text-slate-900 leading-none">
+              <div className="font-black text-lg tracking-tight text-white leading-none">
                 SAGITARIUS PARCEL
               </div>
-              <div className="text-[10px] uppercase font-bold text-purple-800 tracking-wider">
+              <div className="text-[10px] uppercase font-bold text-amber-300 tracking-wider">
                 Parcel & Tabungan Idul Fitri
               </div>
             </div>
           </div>
 
-          <div className="hidden md:flex items-center space-x-6 text-xs font-semibold text-slate-600">
-            <a href="#katalog" className="hover:text-purple-700 transition">
-              Katalog Paket
+          {/* Desktop & Tablet Menu Buttons (Enhanced Clickable Button Pills) */}
+          <div className="hidden xl:flex items-center space-x-2 text-xs">
+            <a
+              href="#katalog"
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-purple-950/80 hover:bg-purple-800/90 text-purple-100 hover:text-white border border-purple-500/40 hover:border-amber-400/80 shadow-xs transition transform hover:scale-102 font-bold"
+            >
+              <Package className="w-3.5 h-3.5 text-amber-300" />
+              <span>Katalog Paket</span>
             </a>
-            <a href="#simulasi" className="hover:text-purple-700 transition">
-              Simulasi Tabungan
+            <a
+              href="#simulasi"
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-purple-950/80 hover:bg-purple-800/90 text-purple-100 hover:text-white border border-purple-500/40 hover:border-amber-400/80 shadow-xs transition transform hover:scale-102 font-bold"
+            >
+              <Calculator className="w-3.5 h-3.5 text-amber-300" />
+              <span>Simulasi Tabungan</span>
             </a>
-            <a href="#agen" className="hover:text-purple-700 transition">
-              Daftar Agen Terdekat
+            <a
+              href="#agen"
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-purple-950/80 hover:bg-purple-800/90 text-purple-100 hover:text-white border border-purple-500/40 hover:border-amber-400/80 shadow-xs transition transform hover:scale-102 font-bold"
+            >
+              <MapPin className="w-3.5 h-3.5 text-amber-300" />
+              <span>Daftar Agen Terdekat</span>
             </a>
             <button
               onClick={onOpenAgentRegistration}
-              className="text-purple-700 hover:text-purple-900 font-bold transition flex items-center gap-1"
+              className="flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-400 via-amber-300 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 border border-amber-300 shadow-md transition transform hover:scale-105 active:scale-95 font-black"
             >
-              <Coins className="w-3.5 h-3.5" />
+              <Coins className="w-3.5 h-3.5 text-slate-950" />
               <span>Gabung Agen</span>
             </button>
-            <a href="#tentang" className="hover:text-purple-700 transition">
-              Tentang Kami
+            <a
+              href="#tentang"
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-purple-950/80 hover:bg-purple-800/90 text-purple-100 hover:text-white border border-purple-500/40 hover:border-amber-400/80 shadow-xs transition transform hover:scale-102 font-bold"
+            >
+              <Info className="w-3.5 h-3.5 text-purple-300" />
+              <span>Tentang Kami</span>
             </a>
-            <a href="#faq" className="hover:text-purple-700 transition">
-              FAQ
+            <a
+              href="#faq"
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-purple-950/80 hover:bg-purple-800/90 text-purple-100 hover:text-white border border-purple-500/40 hover:border-amber-400/80 shadow-xs transition transform hover:scale-102 font-bold"
+            >
+              <HelpCircle className="w-3.5 h-3.5 text-purple-300" />
+              <span>FAQ</span>
             </a>
           </div>
 
+          {/* Right Action Buttons */}
           <div className="flex items-center space-x-2">
             <button
               onClick={onOpenLogin}
-              className="px-4 py-2 border border-purple-600/70 hover:border-purple-700 text-purple-800 hover:text-purple-950 rounded-xl text-xs font-bold hover:bg-purple-50 transition shadow-xs flex items-center gap-1.5"
+              className="px-3.5 py-2 border border-amber-400/70 hover:border-amber-300 bg-amber-400/10 hover:bg-amber-400 text-amber-300 hover:text-slate-950 rounded-xl text-xs font-black transition shadow-xs flex items-center gap-1.5 active:scale-95"
             >
               <LogIn className="w-3.5 h-3.5" />
               <span>Masuk</span>
             </button>
             <button
               onClick={() => onOpenRegister()}
-              className="px-4 py-2 bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-800 hover:to-indigo-800 text-white rounded-xl text-xs font-bold shadow-md hover:shadow-lg shadow-purple-900/20 transition"
+              className="hidden sm:inline-flex px-4 py-2 bg-gradient-to-r from-amber-400 via-amber-300 to-yellow-400 hover:from-amber-300 hover:to-amber-400 text-slate-950 rounded-xl text-xs font-black shadow-md hover:shadow-lg shadow-amber-500/20 transition transform hover:scale-105 active:scale-95"
             >
               + Daftar Member
             </button>
+
+            {/* Mobile Hamburger Menu Button */}
+            <button
+              onClick={() => setIsMobileNavOpen(!isMobileNavOpen)}
+              className="xl:hidden p-2 rounded-xl bg-purple-900/90 border border-purple-500/50 text-amber-300 hover:text-white hover:bg-purple-800 transition"
+              aria-label="Toggle Menu"
+            >
+              {isMobileNavOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
           </div>
         </div>
+
+        {/* Quick Horizontal Scrollable Strip for Mobile & Tablet */}
+        <div className="xl:hidden max-w-7xl mx-auto mt-1 px-1 flex items-center gap-1.5 overflow-x-auto pb-0.5 pt-0.5">
+          <a
+            href="#katalog"
+            className="flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-purple-900/80 text-purple-200 border border-purple-500/40 text-[11px] font-bold whitespace-nowrap shrink-0 shadow-2xs hover:bg-purple-800"
+          >
+            <Package className="w-3 h-3 text-amber-300" />
+            <span>Katalog</span>
+          </a>
+          <a
+            href="#simulasi"
+            className="flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-purple-900/80 text-purple-200 border border-purple-500/40 text-[11px] font-bold whitespace-nowrap shrink-0 shadow-2xs hover:bg-purple-800"
+          >
+            <Calculator className="w-3 h-3 text-amber-300" />
+            <span>Simulasi</span>
+          </a>
+          <a
+            href="#agen"
+            className="flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-purple-900/80 text-purple-200 border border-purple-500/40 text-[11px] font-bold whitespace-nowrap shrink-0 shadow-2xs hover:bg-purple-800"
+          >
+            <MapPin className="w-3 h-3 text-amber-300" />
+            <span>Agen</span>
+          </a>
+          <button
+            onClick={onOpenAgentRegistration}
+            className="flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-amber-400 text-slate-950 text-[11px] font-black whitespace-nowrap shrink-0 shadow-2xs hover:bg-amber-300"
+          >
+            <Coins className="w-3 h-3" />
+            <span>Gabung Agen</span>
+          </button>
+          <a
+            href="#tentang"
+            className="flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-purple-900/80 text-purple-200 border border-purple-500/40 text-[11px] font-bold whitespace-nowrap shrink-0 shadow-2xs hover:bg-purple-800"
+          >
+            <Info className="w-3 h-3 text-purple-300" />
+            <span>Tentang</span>
+          </a>
+          <a
+            href="#faq"
+            className="flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-purple-900/80 text-purple-200 border border-purple-500/40 text-[11px] font-bold whitespace-nowrap shrink-0 shadow-2xs hover:bg-purple-800"
+          >
+            <HelpCircle className="w-3 h-3 text-purple-300" />
+            <span>FAQ</span>
+          </a>
+        </div>
+
+        {/* Expanded Mobile Menu Drawer */}
+        {isMobileNavOpen && (
+          <div className="xl:hidden max-w-7xl mx-auto mt-2 p-3 bg-gradient-to-b from-[#1c0836] to-[#120424] border border-purple-500/40 rounded-2xl shadow-2xl space-y-2 animate-fadeIn">
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <a
+                href="#katalog"
+                onClick={() => setIsMobileNavOpen(false)}
+                className="flex items-center space-x-2 p-2.5 rounded-xl bg-purple-950/80 border border-purple-500/30 text-purple-100 font-bold hover:bg-purple-800"
+              >
+                <Package className="w-4 h-4 text-amber-300" />
+                <span>Katalog Paket</span>
+              </a>
+              <a
+                href="#simulasi"
+                onClick={() => setIsMobileNavOpen(false)}
+                className="flex items-center space-x-2 p-2.5 rounded-xl bg-purple-950/80 border border-purple-500/30 text-purple-100 font-bold hover:bg-purple-800"
+              >
+                <Calculator className="w-4 h-4 text-amber-300" />
+                <span>Simulasi Cicilan</span>
+              </a>
+              <a
+                href="#agen"
+                onClick={() => setIsMobileNavOpen(false)}
+                className="flex items-center space-x-2 p-2.5 rounded-xl bg-purple-950/80 border border-purple-500/30 text-purple-100 font-bold hover:bg-purple-800"
+              >
+                <MapPin className="w-4 h-4 text-amber-300" />
+                <span>Agen Terdekat</span>
+              </a>
+              <button
+                onClick={() => {
+                  setIsMobileNavOpen(false);
+                  onOpenAgentRegistration();
+                }}
+                className="flex items-center space-x-2 p-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 font-black text-left"
+              >
+                <Coins className="w-4 h-4" />
+                <span>Gabung Agen</span>
+              </button>
+              <a
+                href="#tentang"
+                onClick={() => setIsMobileNavOpen(false)}
+                className="flex items-center space-x-2 p-2.5 rounded-xl bg-purple-950/80 border border-purple-500/30 text-purple-100 font-bold hover:bg-purple-800"
+              >
+                <Info className="w-4 h-4 text-purple-300" />
+                <span>Tentang Kami</span>
+              </a>
+              <a
+                href="#faq"
+                onClick={() => setIsMobileNavOpen(false)}
+                className="flex items-center space-x-2 p-2.5 rounded-xl bg-purple-950/80 border border-purple-500/30 text-purple-100 font-bold hover:bg-purple-800"
+              >
+                <HelpCircle className="w-4 h-4 text-purple-300" />
+                <span>FAQ & Bantuan</span>
+              </a>
+            </div>
+
+            <div className="pt-2 border-t border-purple-800/60 flex gap-2">
+              <button
+                onClick={() => {
+                  setIsMobileNavOpen(false);
+                  onOpenRegister();
+                }}
+                className="flex-1 py-2.5 bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 font-black rounded-xl text-xs text-center shadow-md"
+              >
+                + Daftar Member Baru
+              </button>
+            </div>
+          </div>
+        )}
       </nav>
 
       {/* Hero Section with Luxury Background */}

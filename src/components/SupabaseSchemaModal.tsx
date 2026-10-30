@@ -18,6 +18,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { ParcelPackage, Agent, Member, Transaction } from '../types/parcel';
+import { safeFetchWithStatus, safePostJson } from '../utils/apiClient';
 
 interface SupabaseSchemaModalProps {
   packages: ParcelPackage[];
@@ -56,10 +57,9 @@ export const SupabaseSchemaModal: React.FC<SupabaseSchemaModalProps> = ({
   const fetchStatus = async () => {
     setIsChecking(true);
     try {
-      const res = await fetch('/api/db/status');
-      if (res.ok) {
-        const data = await res.json();
-        setDbStatus(data);
+      const res = await safeFetchWithStatus<DbStatusResponse | null>('/api/db/status', null, { timeoutMs: 7000 });
+      if (res.ok && res.data) {
+        setDbStatus(res.data);
       }
     } catch (e: any) {
       console.warn('Could not fetch DB status:', e);
@@ -76,16 +76,19 @@ export const SupabaseSchemaModal: React.FC<SupabaseSchemaModalProps> = ({
     setIsReconnecting(true);
     setActionMessage('');
     try {
-      const res = await fetch('/api/db/reconnect', { method: 'POST' });
-      const data = await res.json();
-      setDbStatus(data);
-      if (data.connected) {
-        setActionMessage('✅ Berhasil terhubung ke MongoDB Atlas secara real-time!');
+      const res = await safePostJson<DbStatusResponse | null>('/api/db/reconnect', {}, null, { timeoutMs: 12000 });
+      if (res.ok && res.data) {
+        setDbStatus(res.data);
+        if (res.data.connected) {
+          setActionMessage('✅ Berhasil terhubung ke MongoDB Atlas secara real-time!');
+        } else {
+          setActionMessage('⚠️ MongoDB Atlas masih membatasi akses. Silakan klik menu "IP Access List" di bawah Network Access lalu tambahkan 0.0.0.0/0.');
+        }
       } else {
-        setActionMessage('⚠️ MongoDB Atlas masih menolak koneksi. Pastikan IP 0.0.0.0/0 sudah diaktifkan di Network Access.');
+        setActionMessage(`Gagal reconnect: ${res.error || 'Server backend tidak merespon'}`);
       }
     } catch (e: any) {
-      setActionMessage('Gagal reconnect: ' + (e.message || String(e)));
+      setActionMessage('Gagal reconnect: ' + (e?.message || String(e)));
     } finally {
       setIsReconnecting(false);
     }
@@ -95,12 +98,15 @@ export const SupabaseSchemaModal: React.FC<SupabaseSchemaModalProps> = ({
     setIsSeeding(true);
     setActionMessage('');
     try {
-      const res = await fetch('/api/db/seed', { method: 'POST' });
-      const data = await res.json();
-      setActionMessage(data.message || 'Seed selesai.');
-      fetchStatus();
+      const res = await safePostJson<{ message?: string; error?: string }>('/api/db/seed', {}, {}, { timeoutMs: 12000 });
+      if (res.ok) {
+        setActionMessage(res.data?.message || '✅ Seed database berhasil disinkronkan.');
+        fetchStatus();
+      } else {
+        setActionMessage(`Gagal seed: ${res.error || 'Gagal sinkronisasi data'}`);
+      }
     } catch (e: any) {
-      setActionMessage('Gagal seed: ' + (e.message || String(e)));
+      setActionMessage('Gagal seed: ' + (e?.message || String(e)));
     } finally {
       setIsSeeding(false);
     }
@@ -240,13 +246,13 @@ PORT=3000`;
                         </a>
                       </li>
                       <li>
-                        Di bilah menu kiri, klik menu <strong>Network Access</strong> (di bawah kategori <em>Security</em>).
+                        Di bilah menu kiri (sidebar), lihat bagian <strong>NETWORK ACCESS</strong> lalu klik <strong>IP Access List</strong> (posisinya tepat di bawah Database Users).
                       </li>
                       <li>
-                        Klik tombol hijau <strong>+ Add IP Address</strong>.
+                        Di halaman IP Access List tersebut, klik tombol hijau <strong>+ Add IP Address</strong>.
                       </li>
                       <li>
-                        Pilih tombol <strong>Allow Access from Anywhere</strong> (otomatis mengisi <code className="bg-slate-800 px-1 rounded text-emerald-400">0.0.0.0/0</code>), lalu klik <strong>Confirm</strong>.
+                        Pilih opsi <strong>Allow Access from Anywhere</strong> (otomatis mengisi <code className="bg-slate-800 px-1 rounded text-emerald-400">0.0.0.0/0</code>), lalu klik <strong>Confirm</strong>.
                       </li>
                       <li>
                         Kembali ke sini dan klik tombol <strong>"Coba Hubungkan Ulang (Reconnect)"</strong> di bawah!

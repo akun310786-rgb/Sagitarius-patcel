@@ -18,6 +18,7 @@ import { CatalogManagerModal } from './components/CatalogManagerModal';
 import { SupabaseSchemaModal } from './components/SupabaseSchemaModal';
 import { ToastContainer } from './components/ToastContainer';
 import { AuthLoginModal } from './components/AuthLoginModal';
+import { safeFetchJson, safePostJson } from './utils/apiClient';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<UserRole | 'deposit'>('public');
@@ -52,35 +53,23 @@ export default function App() {
 
   const activeMember = members.find((m) => m.id === selectedMemberId) || members[0];
 
-  // Load data from Real Database (MongoDB Atlas) backend API
+  // Load data from Real Database (MongoDB Atlas) backend API with safe fallback
   useEffect(() => {
     const fetchRealDbData = async () => {
       try {
-        const [resPkgs, resMbrs, resAgts, resTrx] = await Promise.all([
-          fetch('/api/packages').catch(() => null),
-          fetch('/api/members').catch(() => null),
-          fetch('/api/agents').catch(() => null),
-          fetch('/api/transactions').catch(() => null)
+        const [loadedPkgs, loadedMbrs, loadedAgts, loadedTrx] = await Promise.all([
+          safeFetchJson<ParcelPackage[]>('/api/packages', PACKAGES),
+          safeFetchJson<Member[]>('/api/members', INITIAL_MEMBERS),
+          safeFetchJson<Agent[]>('/api/agents', AGENTS),
+          safeFetchJson<Transaction[]>('/api/transactions', INITIAL_TRANSACTIONS)
         ]);
 
-        if (resPkgs && resPkgs.ok) {
-          const data = await resPkgs.json();
-          if (Array.isArray(data) && data.length > 0) setPackages(data);
-        }
-        if (resMbrs && resMbrs.ok) {
-          const data = await resMbrs.json();
-          if (Array.isArray(data) && data.length > 0) setMembers(data);
-        }
-        if (resAgts && resAgts.ok) {
-          const data = await resAgts.json();
-          if (Array.isArray(data) && data.length > 0) setAgents(data);
-        }
-        if (resTrx && resTrx.ok) {
-          const data = await resTrx.json();
-          if (Array.isArray(data) && data.length > 0) setTransactions(data);
-        }
+        if (Array.isArray(loadedPkgs) && loadedPkgs.length > 0) setPackages(loadedPkgs);
+        if (Array.isArray(loadedMbrs) && loadedMbrs.length > 0) setMembers(loadedMbrs);
+        if (Array.isArray(loadedAgts) && loadedAgts.length > 0) setAgents(loadedAgts);
+        if (Array.isArray(loadedTrx) && loadedTrx.length > 0) setTransactions(loadedTrx);
       } catch (e) {
-        console.warn('[MongoDB Atlas Sync] Local memory active:', e);
+        console.warn('[MongoDB Atlas Sync] Local memory fallback active:', e);
       }
     };
 
@@ -163,11 +152,7 @@ export default function App() {
     );
 
     // Sync transaction and updated member to MongoDB Atlas
-    fetch('/api/transactions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newTx)
-    }).catch((err) => console.warn('Sync transaction error:', err));
+    safePostJson('/api/transactions', newTx);
 
     showToast({
       title: '📥 Setoran Baru Berhasil Dicatat!',
@@ -197,11 +182,7 @@ export default function App() {
     );
 
     if (targetTx) {
-      fetch('/api/transactions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...targetTx, status: 'Berhasil' })
-      }).catch((err) => console.warn('Sync approve error:', err));
+      safePostJson('/api/transactions', { ...targetTx, status: 'Berhasil' });
     }
 
     showToast({
@@ -226,11 +207,7 @@ export default function App() {
     );
 
     if (targetTx) {
-      fetch('/api/transactions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...targetTx, status: 'Ditolak' })
-      }).catch((err) => console.warn('Sync reject error:', err));
+      safePostJson('/api/transactions', { ...targetTx, status: 'Ditolak' });
     }
 
     showToast({
@@ -255,11 +232,7 @@ export default function App() {
     );
 
     if (targetTx) {
-      fetch('/api/transactions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...targetTx, status: 'Berhasil', notes: 'Diverifikasi langsung oleh Korwil Priangan Timur' })
-      }).catch((err) => console.warn('Sync korwil error:', err));
+      safePostJson('/api/transactions', { ...targetTx, status: 'Berhasil', notes: 'Diverifikasi langsung oleh Korwil Priangan Timur' });
     }
 
     showToast({
@@ -284,11 +257,7 @@ export default function App() {
     );
 
     if (member) {
-      fetch('/api/members', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...member, status: 'Lunas' })
-      }).catch((err) => console.warn('Sync fulfill error:', err));
+      safePostJson('/api/members', { ...member, status: 'Lunas' });
     }
 
     showToast({
@@ -304,11 +273,7 @@ export default function App() {
     setSelectedMemberId(newMember.id);
 
     // Sync to MongoDB Atlas
-    fetch('/api/members', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newMember)
-    }).catch((err) => console.warn('Sync member error:', err));
+    safePostJson('/api/members', newMember);
 
     showToast({
       title: 'Member Baru Terdaftar! 🎉',
@@ -324,11 +289,7 @@ export default function App() {
     setCurrentView('agent');
 
     // Sync to MongoDB Atlas
-    fetch('/api/agents', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newAgent)
-    }).catch((err) => console.warn('Sync agent error:', err));
+    safePostJson('/api/agents', newAgent);
 
     showToast({
       title: 'Mitra Agen Baru Terdaftar! 🏪',
@@ -342,11 +303,7 @@ export default function App() {
     setPackages((prev) => prev.map((p) => (p.id === updatedPkg.id ? updatedPkg : p)));
 
     // Sync to MongoDB Atlas
-    fetch('/api/packages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updatedPkg)
-    }).catch((err) => console.warn('Sync package error:', err));
+    safePostJson('/api/packages', updatedPkg);
 
     showToast({
       title: 'Katalog Paket Diperbarui! 📦',
@@ -360,11 +317,7 @@ export default function App() {
     setPackages((prev) => [...prev, newPkg]);
 
     // Sync to MongoDB Atlas
-    fetch('/api/packages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newPkg)
-    }).catch((err) => console.warn('Sync new package error:', err));
+    safePostJson('/api/packages', newPkg);
 
     showToast({
       title: 'Paket Baru Ditambahkan! ✨',

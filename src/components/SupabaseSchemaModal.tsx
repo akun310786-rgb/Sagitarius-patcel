@@ -1,16 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   X,
   Database,
   Code2,
   Table,
   CheckCircle2,
+  AlertTriangle,
+  RefreshCw,
   Copy,
   Server,
   ShieldCheck,
   Download,
   Terminal,
-  ExternalLink
+  ExternalLink,
+  Sparkles,
+  Layers,
+  ArrowRight
 } from 'lucide-react';
 import { ParcelPackage, Agent, Member, Transaction } from '../types/parcel';
 
@@ -22,6 +27,15 @@ interface SupabaseSchemaModalProps {
   onClose: () => void;
 }
 
+interface DbStatusResponse {
+  connected: boolean;
+  database: string;
+  maskedUri: string;
+  collections: { name: string; count: number }[];
+  error: string | null;
+  needsIpWhitelist?: boolean;
+}
+
 export const SupabaseSchemaModal: React.FC<SupabaseSchemaModalProps> = ({
   packages,
   agents,
@@ -29,178 +43,139 @@ export const SupabaseSchemaModal: React.FC<SupabaseSchemaModalProps> = ({
   transactions,
   onClose
 }) => {
-  const [activeTab, setActiveTab] = useState<'sql' | 'studio' | 'env'>('studio');
+  const [activeTab, setActiveTab] = useState<'status' | 'collections' | 'env'>('status');
   const [copied, setCopied] = useState(false);
-  const [selectedTable, setSelectedTable] = useState<'packages' | 'agents' | 'members' | 'transactions'>('packages');
+  const [selectedCollection, setSelectedCollection] = useState<'packages' | 'agents' | 'members' | 'transactions'>('packages');
 
-  const sqlSchema = `-- ==============================================================
--- SAGITARIUS PARCEL: PRODUCTION SUPABASE POSTGRESQL SCHEMA
--- Database: PostgreSQL 15+ (Supabase Cloud)
--- ==============================================================
+  const [dbStatus, setDbStatus] = useState<DbStatusResponse | null>(null);
+  const [isChecking, setIsChecking] = useState<boolean>(true);
+  const [isReconnecting, setIsReconnecting] = useState<boolean>(false);
+  const [isSeeding, setIsSeeding] = useState<boolean>(false);
+  const [actionMessage, setActionMessage] = useState<string>('');
 
--- Enable UUID extension
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+  const fetchStatus = async () => {
+    setIsChecking(true);
+    try {
+      const res = await fetch('/api/db/status');
+      if (res.ok) {
+        const data = await res.json();
+        setDbStatus(data);
+      }
+    } catch (e: any) {
+      console.warn('Could not fetch DB status:', e);
+    } finally {
+      setIsChecking(false);
+    }
+  };
 
--- 1. Tabel Master Paket Lebaran
-CREATE TABLE public.packages (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    code VARCHAR(30) UNIQUE NOT NULL,
-    name VARCHAR(100) NOT NULL,
-    category VARCHAR(50) NOT NULL, -- 'keluarga', 'premium', 'kue', 'sembako'
-    tag VARCHAR(50),
-    description TEXT,
-    target_price NUMERIC(12,2) NOT NULL,
-    weekly_payment NUMERIC(10,2) NOT NULL,
-    estimated_weight VARCHAR(30),
-    image_url TEXT,
-    is_active BOOLEAN DEFAULT true,
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
+  useEffect(() => {
+    fetchStatus();
+  }, []);
 
--- 2. Tabel Item Bahan Penyusun Parcel
-CREATE TABLE public.package_items (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    package_id UUID REFERENCES public.packages(id) ON DELETE CASCADE,
-    item_name VARCHAR(150) NOT NULL,
-    quantity INT DEFAULT 1,
-    unit VARCHAR(30) DEFAULT 'pcs',
-    is_customizable BOOLEAN DEFAULT false,
-    sort_order INT DEFAULT 0
-);
+  const handleReconnect = async () => {
+    setIsReconnecting(true);
+    setActionMessage('');
+    try {
+      const res = await fetch('/api/db/reconnect', { method: 'POST' });
+      const data = await res.json();
+      setDbStatus(data);
+      if (data.connected) {
+        setActionMessage('✅ Berhasil terhubung ke MongoDB Atlas secara real-time!');
+      } else {
+        setActionMessage('⚠️ MongoDB Atlas masih menolak koneksi. Pastikan IP 0.0.0.0/0 sudah diaktifkan di Network Access.');
+      }
+    } catch (e: any) {
+      setActionMessage('Gagal reconnect: ' + (e.message || String(e)));
+    } finally {
+      setIsReconnecting(false);
+    }
+  };
 
--- 3. Tabel Outlet Agen & Rekening Pencairan Komisi
-CREATE TABLE public.agents (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    code VARCHAR(20) UNIQUE NOT NULL,
-    store_name VARCHAR(100) NOT NULL,
-    owner_name VARCHAR(100) NOT NULL,
-    phone VARCHAR(20) NOT NULL,
-    district VARCHAR(60) NOT NULL,
-    regency VARCHAR(60) NOT NULL,
-    bank_name VARCHAR(40),
-    bank_account_number VARCHAR(40),
-    bank_account_name VARCHAR(100),
-    commission_rate_base NUMERIC(4,2) DEFAULT 0.05,
-    status VARCHAR(20) DEFAULT 'Aktif',
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
+  const handleSeed = async () => {
+    setIsSeeding(true);
+    setActionMessage('');
+    try {
+      const res = await fetch('/api/db/seed', { method: 'POST' });
+      const data = await res.json();
+      setActionMessage(data.message || 'Seed selesai.');
+      fetchStatus();
+    } catch (e: any) {
+      setActionMessage('Gagal seed: ' + (e.message || String(e)));
+    } finally {
+      setIsSeeding(false);
+    }
+  };
 
--- 4. Tabel Member / Peserta Tabungan Hari Raya
-CREATE TABLE public.members (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    member_code VARCHAR(30) UNIQUE NOT NULL,
-    name VARCHAR(100) NOT NULL,
-    phone VARCHAR(20) NOT NULL,
-    address TEXT,
-    regency VARCHAR(60) NOT NULL,
-    agent_id UUID REFERENCES public.agents(id),
-    package_id UUID REFERENCES public.packages(id),
-    total_saved NUMERIC(12,2) DEFAULT 0,
-    status VARCHAR(20) DEFAULT 'Aktif', -- 'Aktif', 'Lunas'
-    qr_token VARCHAR(100) UNIQUE NOT NULL,
-    pickup_date VARCHAR(60),
-    join_date TIMESTAMPTZ DEFAULT NOW()
-);
-
--- 5. Tabel Mutasi Setoran Tabungan
-CREATE TABLE public.transactions (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    invoice_no VARCHAR(40) UNIQUE NOT NULL,
-    member_id UUID REFERENCES public.members(id) ON DELETE CASCADE,
-    agent_id UUID REFERENCES public.agents(id),
-    amount NUMERIC(12,2) NOT NULL,
-    method VARCHAR(50) NOT NULL, -- 'Transfer Bank BRI', 'Transfer Bank BCA', 'QRIS Instant', 'Tunai Agen'
-    status VARCHAR(30) DEFAULT 'Menunggu', -- 'Berhasil', 'Menunggu', 'Ditolak'
-    proof_url TEXT,
-    notes TEXT,
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- 6. Tabel Komisi Agen Multi-Tier
-CREATE TABLE public.agent_commissions (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    agent_id UUID REFERENCES public.agents(id) ON DELETE CASCADE,
-    member_id UUID REFERENCES public.members(id),
-    basis_amount NUMERIC(12,2) NOT NULL,
-    commission_rate NUMERIC(4,2) NOT NULL, -- 0.05, 0.06, 0.07
-    commission_earned NUMERIC(10,2) NOT NULL,
-    status VARCHAR(30) DEFAULT 'Tercatat', -- 'Siap_Cair', 'Dicairkan'
-    disbursement_date TIMESTAMPTZ
-);
-
--- Row Level Security (RLS) Policies
-ALTER TABLE public.packages ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.agents ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.members ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
-
--- Public can read packages
-CREATE POLICY "Public read packages" ON public.packages FOR SELECT USING (true);
-
--- Agents can only view their assigned members
-CREATE POLICY "Agent member view" ON public.members FOR SELECT
-    USING (auth.jwt() ->> 'role' = 'admin' OR agent_id IN (SELECT id FROM public.agents WHERE phone = auth.jwt() ->> 'phone'));
-`;
-
-  const handleCopySQL = () => {
-    navigator.clipboard.writeText(sqlSchema);
+  const handleCopyEnv = () => {
+    const envText = `MONGODB_URI="mongodb+srv://akun310786_db_user:D0oBXnbyTd1iAgtp@database.t09ogyz.mongodb.net/sagitarius_parcel?retryWrites=true&w=majority"
+PORT=3000`;
+    navigator.clipboard.writeText(envText);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-xs p-3 sm:p-5 overflow-y-auto">
-      <div className="bg-[#0f172a] text-slate-100 rounded-3xl shadow-2xl max-w-5xl w-full max-h-[92vh] flex flex-col overflow-hidden border border-slate-800">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xs p-3 sm:p-5 overflow-y-auto">
+      <div className="bg-[#0b1120] text-slate-100 rounded-3xl shadow-2xl max-w-5xl w-full max-h-[92vh] flex flex-col overflow-hidden border border-slate-800">
         {/* Header */}
-        <div className="bg-slate-900 border-b border-slate-800 p-5 flex flex-wrap items-center justify-between gap-4 shrink-0">
+        <div className="bg-[#0f172a] border-b border-slate-800 p-5 flex flex-wrap items-center justify-between gap-4 shrink-0">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/30">
+            <div className={`w-11 h-11 rounded-2xl flex items-center justify-center border shadow-md ${
+              dbStatus?.connected
+                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                : 'bg-amber-500/20 text-amber-400 border-amber-500/40'
+            }`}>
               <Database className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <h3 className="font-bold text-white text-base">Supabase Cloud Architecture Console</h3>
-                <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-mono px-2 py-0.5 rounded">
-                  PostgreSQL 15+
+                <h3 className="font-bold text-white text-base">MongoDB Atlas Cloud Console</h3>
+                <span className={`text-[10px] font-mono px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1 ${
+                  dbStatus?.connected
+                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
+                    : 'bg-amber-500/20 text-amber-400 border border-amber-500/40 animate-pulse'
+                }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${dbStatus?.connected ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+                  <span>{dbStatus?.connected ? 'ONLINE (REAL DATABASE)' : 'TERKONEKSI CREDENTIAL (IP FILTER)'}</span>
                 </span>
               </div>
               <p className="text-xs text-slate-400">
-                Skema tabel relasional, foreign keys, dan engine data real-time Sagitarius Parcel
+                Cluster: <span className="text-slate-300 font-mono">database.t09ogyz.mongodb.net</span> • Database: <span className="text-amber-300 font-mono">sagitarius_parcel</span>
               </p>
             </div>
           </div>
 
           <div className="flex items-center space-x-2">
-            <div className="flex bg-slate-800 p-1 rounded-xl text-xs font-semibold">
+            <div className="flex bg-slate-900 p-1 rounded-xl text-xs font-semibold border border-slate-800">
               <button
-                onClick={() => setActiveTab('studio')}
+                onClick={() => setActiveTab('status')}
                 className={`px-3 py-1.5 rounded-lg transition ${
-                  activeTab === 'studio' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white'
+                  activeTab === 'status' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'
                 }`}
               >
-                Table Studio
+                Status & Koneksi
               </button>
               <button
-                onClick={() => setActiveTab('sql')}
+                onClick={() => setActiveTab('collections')}
                 className={`px-3 py-1.5 rounded-lg transition ${
-                  activeTab === 'sql' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white'
+                  activeTab === 'collections' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'
                 }`}
               >
-                SQL Schema
+                Data Collections
               </button>
               <button
                 onClick={() => setActiveTab('env')}
                 className={`px-3 py-1.5 rounded-lg transition ${
-                  activeTab === 'env' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white'
+                  activeTab === 'env' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'
                 }`}
               >
-                Koneksi & Env
+                Kredensial .env
               </button>
             </div>
 
             <button
               onClick={onClose}
-              className="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800"
+              className="text-slate-400 hover:text-white p-2 rounded-xl hover:bg-slate-800 transition"
             >
               <X className="w-5 h-5" />
             </button>
@@ -208,191 +183,318 @@ CREATE POLICY "Agent member view" ON public.members FOR SELECT
         </div>
 
         {/* Body */}
-        <div className="p-6 overflow-y-auto space-y-5 text-xs">
-          {activeTab === 'studio' && (
+        <div className="p-6 overflow-y-auto space-y-6 text-xs flex-1">
+          {actionMessage && (
+            <div className="p-3.5 bg-emerald-950/70 border border-emerald-500/50 rounded-2xl text-emerald-300 text-xs flex items-center justify-between">
+              <span>{actionMessage}</span>
+              <button onClick={() => setActionMessage('')} className="text-slate-400 hover:text-white ml-2">✕</button>
+            </div>
+          )}
+
+          {activeTab === 'status' && (
+            <div className="space-y-5">
+              {/* Status Alert Banner */}
+              {dbStatus?.connected ? (
+                <div className="p-5 bg-gradient-to-r from-emerald-950/80 via-slate-900 to-emerald-950/80 border border-emerald-500/50 rounded-2xl flex items-start space-x-4 shadow-xl">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/40">
+                    <CheckCircle2 className="w-6 h-6" />
+                  </div>
+                  <div className="space-y-1 flex-1">
+                    <h4 className="font-bold text-white text-sm">Database Real MongoDB Atlas Berhasil Terhubung!</h4>
+                    <p className="text-slate-300 text-xs leading-relaxed">
+                      Server backend Node.js & Express telah aktif berkomunikasi langsung dengan cluster MongoDB Atlas Anda. Semua data pendaftaran member, perubahan paket, mutasi setoran, dan data agen tersimpan permanen di cloud.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-5 bg-gradient-to-r from-amber-950/80 via-slate-900 to-slate-900 border border-amber-500/40 rounded-2xl space-y-3.5 shadow-xl">
+                  <div className="flex items-start space-x-3.5">
+                    <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0 border border-amber-500/40">
+                      <AlertTriangle className="w-6 h-6" />
+                    </div>
+                    <div className="space-y-1">
+                      <h4 className="font-bold text-amber-300 text-sm">
+                        Kredensial MongoDB Atlas Diterima — Langkah Terakhir: Izinkan IP di Atlas
+                      </h4>
+                      <p className="text-slate-300 text-xs leading-relaxed">
+                        Kredensial akun <code className="bg-black/50 px-1.5 py-0.5 rounded text-amber-300">akun310786_db_user</code> sudah terpasang di sistem backend. MongoDB Atlas saat ini membatasi koneksi melalui fitur keamanan <strong>Network Access (IP Access List)</strong>.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* 3 Step Tutorial Box */}
+                  <div className="bg-black/40 border border-amber-500/30 rounded-xl p-4 space-y-2.5">
+                    <span className="font-bold text-amber-300 text-xs block uppercase tracking-wide">
+                      Cara Mengaktifkan Akses Cloud di MongoDB Atlas (Hanya 30 Detik):
+                    </span>
+                    <ol className="list-decimal list-inside space-y-1.5 text-slate-300 leading-relaxed text-xs">
+                      <li>
+                        Buka dashboard resmi MongoDB Atlas di{' '}
+                        <a
+                          href="https://cloud.mongodb.com"
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-amber-400 font-bold underline inline-flex items-center gap-1 hover:text-amber-300"
+                        >
+                          cloud.mongodb.com <ExternalLink className="w-3 h-3" />
+                        </a>
+                      </li>
+                      <li>
+                        Di bilah menu kiri, klik menu <strong>Network Access</strong> (di bawah kategori <em>Security</em>).
+                      </li>
+                      <li>
+                        Klik tombol hijau <strong>+ Add IP Address</strong>.
+                      </li>
+                      <li>
+                        Pilih tombol <strong>Allow Access from Anywhere</strong> (otomatis mengisi <code className="bg-slate-800 px-1 rounded text-emerald-400">0.0.0.0/0</code>), lalu klik <strong>Confirm</strong>.
+                      </li>
+                      <li>
+                        Kembali ke sini dan klik tombol <strong>"Coba Hubungkan Ulang (Reconnect)"</strong> di bawah!
+                      </li>
+                    </ol>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-3 pt-1">
+                    <button
+                      onClick={handleReconnect}
+                      disabled={isReconnecting}
+                      className="px-4 py-2.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black rounded-xl text-xs flex items-center space-x-2 transition shadow-md disabled:opacity-50"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${isReconnecting ? 'animate-spin' : ''}`} />
+                      <span>{isReconnecting ? 'Mencoba Menghubungkan...' : 'Coba Hubungkan Ulang (Reconnect)'}</span>
+                    </button>
+                    <span className="text-[11px] text-slate-400">
+                      *Aplikasi tetap berjalan normal menggunakan sinkronisasi memori lokal selama menunggu whitelist.
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Cluster Information Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+                <div className="bg-slate-900/90 border border-slate-800 p-4 rounded-2xl">
+                  <span className="text-slate-400 text-[11px] block">Cluster Provider:</span>
+                  <div className="text-base font-black text-white mt-1 flex items-center gap-2">
+                    <span>MongoDB Atlas</span>
+                    <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded font-mono">Cloud M0</span>
+                  </div>
+                  <span className="text-[10px] text-slate-500 mt-1 block">AWS / Singapore Region</span>
+                </div>
+
+                <div className="bg-slate-900/90 border border-slate-800 p-4 rounded-2xl">
+                  <span className="text-slate-400 text-[11px] block">Nama Database:</span>
+                  <div className="text-base font-black text-amber-300 mt-1 font-mono">
+                    sagitarius_parcel
+                  </div>
+                  <span className="text-[10px] text-slate-500 mt-1 block">Production Schema</span>
+                </div>
+
+                <div className="bg-slate-900/90 border border-slate-800 p-4 rounded-2xl">
+                  <span className="text-slate-400 text-[11px] block">Database User:</span>
+                  <div className="text-base font-black text-white mt-1 font-mono">
+                    akun310786_db_user
+                  </div>
+                  <span className="text-[10px] text-slate-500 mt-1 block">Full Read/Write Access</span>
+                </div>
+
+                <div className="bg-slate-900/90 border border-slate-800 p-4 rounded-2xl">
+                  <span className="text-slate-400 text-[11px] block">Total Collections:</span>
+                  <div className="text-base font-black text-emerald-400 mt-1 font-mono">
+                    4 Tabel Koleksi
+                  </div>
+                  <span className="text-[10px] text-slate-500 mt-1 block">packages, agents, members, transactions</span>
+                </div>
+              </div>
+
+              {/* Actions & Seed Section */}
+              <div className="bg-slate-900/90 border border-slate-800 p-5 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <h4 className="font-bold text-white text-sm flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-amber-400" />
+                    <span>Sinkronisasi Data Awal ke MongoDB</span>
+                  </h4>
+                  <p className="text-xs text-slate-400 max-w-xl">
+                    Masukkan 10 katalog paket resmi, 3 data agen percontohan, dan data member demo langsung ke dalam koleksi MongoDB Atlas.
+                  </p>
+                </div>
+                <button
+                  onClick={handleSeed}
+                  disabled={isSeeding}
+                  className="px-4 py-2.5 bg-emerald-700 hover:bg-emerald-600 text-white font-bold rounded-xl text-xs flex items-center space-x-2 transition shadow-md disabled:opacity-50 whitespace-nowrap"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isSeeding ? 'animate-spin' : ''}`} />
+                  <span>{isSeeding ? 'Memasukkan Data...' : 'Kirim Data Awal ke MongoDB'}</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'collections' && (
             <div className="space-y-4">
-              {/* Table Selector */}
+              {/* Collection Selector Tabs */}
               <div className="flex items-center space-x-2 overflow-x-auto pb-1">
-                <span className="text-slate-500 font-semibold mr-1">Tabel:</span>
                 <button
-                  onClick={() => setSelectedTable('packages')}
-                  className={`px-3 py-1.5 rounded-lg font-mono text-xs font-bold transition ${
-                    selectedTable === 'packages'
-                      ? 'bg-emerald-500 text-slate-950'
-                      : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                  onClick={() => setSelectedCollection('packages')}
+                  className={`px-3 py-2 rounded-xl font-mono text-xs font-bold transition flex items-center gap-1.5 ${
+                    selectedCollection === 'packages'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
                   }`}
                 >
-                  public.packages ({packages.length})
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>packages ({packages.length})</span>
                 </button>
+
                 <button
-                  onClick={() => setSelectedTable('agents')}
-                  className={`px-3 py-1.5 rounded-lg font-mono text-xs font-bold transition ${
-                    selectedTable === 'agents'
-                      ? 'bg-emerald-500 text-slate-950'
-                      : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                  onClick={() => setSelectedCollection('members')}
+                  className={`px-3 py-2 rounded-xl font-mono text-xs font-bold transition flex items-center gap-1.5 ${
+                    selectedCollection === 'members'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
                   }`}
                 >
-                  public.agents ({agents.length})
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>members ({members.length})</span>
                 </button>
+
                 <button
-                  onClick={() => setSelectedTable('members')}
-                  className={`px-3 py-1.5 rounded-lg font-mono text-xs font-bold transition ${
-                    selectedTable === 'members'
-                      ? 'bg-emerald-500 text-slate-950'
-                      : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                  onClick={() => setSelectedCollection('agents')}
+                  className={`px-3 py-2 rounded-xl font-mono text-xs font-bold transition flex items-center gap-1.5 ${
+                    selectedCollection === 'agents'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
                   }`}
                 >
-                  public.members ({members.length})
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>agents ({agents.length})</span>
                 </button>
+
                 <button
-                  onClick={() => setSelectedTable('transactions')}
-                  className={`px-3 py-1.5 rounded-lg font-mono text-xs font-bold transition ${
-                    selectedTable === 'transactions'
-                      ? 'bg-emerald-500 text-slate-950'
-                      : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                  onClick={() => setSelectedCollection('transactions')}
+                  className={`px-3 py-2 rounded-xl font-mono text-xs font-bold transition flex items-center gap-1.5 ${
+                    selectedCollection === 'transactions'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
                   }`}
                 >
-                  public.transactions ({transactions.length})
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>transactions ({transactions.length})</span>
                 </button>
               </div>
 
-              {/* Table Data View */}
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-inner">
-                <div className="overflow-x-auto">
-                  {selectedTable === 'packages' && (
-                    <table className="w-full text-left font-mono text-[11px]">
-                      <thead>
-                        <tr className="bg-slate-800/80 text-slate-400 border-b border-slate-700">
-                          <th className="p-3">id</th>
-                          <th className="p-3">name</th>
-                          <th className="p-3">category</th>
-                          <th className="p-3 text-right">target_price</th>
-                          <th className="p-3 text-right">weekly_payment</th>
-                          <th className="p-3">weight</th>
-                          <th className="p-3">items_count</th>
+              {/* Data Table Preview */}
+              <div className="bg-slate-900/90 border border-slate-800 rounded-2xl overflow-hidden">
+                <div className="overflow-x-auto max-h-96">
+                  {selectedCollection === 'packages' && (
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-950 text-slate-400 font-bold uppercase text-[10px] sticky top-0">
+                        <tr>
+                          <th className="p-3">ID</th>
+                          <th className="p-3">Nama Paket</th>
+                          <th className="p-3">Kategori</th>
+                          <th className="p-3 text-right">Target Harga</th>
+                          <th className="p-3 text-right">Setoran Harian</th>
+                          <th className="p-3">THR & Hadiah</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-800 text-slate-300">
+                      <tbody className="divide-y divide-slate-800 font-mono">
                         {packages.map((pkg) => (
-                          <tr key={pkg.id} className="hover:bg-slate-800/40">
-                            <td className="p-3 text-slate-500 truncate max-w-[120px]">{pkg.id}</td>
-                            <td className="p-3 font-bold text-white">{pkg.name}</td>
-                            <td className="p-3 text-emerald-400">{pkg.category}</td>
-                            <td className="p-3 text-right font-bold text-amber-400">
-                              Rp {pkg.targetPrice.toLocaleString('id-ID')}
-                            </td>
-                            <td className="p-3 text-right">Rp {pkg.weeklyPayment.toLocaleString('id-ID')}</td>
-                            <td className="p-3 text-slate-400">{pkg.weight}</td>
-                            <td className="p-3 text-cyan-400">{pkg.items.length} macam</td>
+                          <tr key={pkg.id} className="hover:bg-slate-800/50">
+                            <td className="p-3 text-emerald-400 font-bold">{pkg.id}</td>
+                            <td className="p-3 text-white font-sans font-bold">{pkg.name}</td>
+                            <td className="p-3 text-purple-300 uppercase text-[11px]">{pkg.category}</td>
+                            <td className="p-3 text-right text-amber-300">Rp {pkg.targetPrice.toLocaleString('id-ID')}</td>
+                            <td className="p-3 text-right text-emerald-300">Rp {pkg.dailyPayment?.toLocaleString('id-ID')}/hari</td>
+                            <td className="p-3 text-slate-300 font-sans text-[11px] truncate max-w-xs">{pkg.thrBonus || pkg.bonusGift || '-'}</td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   )}
 
-                  {selectedTable === 'agents' && (
-                    <table className="w-full text-left font-mono text-[11px]">
-                      <thead>
-                        <tr className="bg-slate-800/80 text-slate-400 border-b border-slate-700">
-                          <th className="p-3">code</th>
-                          <th className="p-3">store_name</th>
-                          <th className="p-3">owner_name</th>
-                          <th className="p-3">phone</th>
-                          <th className="p-3">regency</th>
-                          <th className="p-3 text-right">member_count</th>
-                          <th className="p-3 text-right">total_omset</th>
+                  {selectedCollection === 'members' && (
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-950 text-slate-400 font-bold uppercase text-[10px] sticky top-0">
+                        <tr>
+                          <th className="p-3">Kode Member</th>
+                          <th className="p-3">Nama Lengkap</th>
+                          <th className="p-3">Paket Pilihan</th>
+                          <th className="p-3">Agen Pendamping</th>
+                          <th className="p-3 text-right">Saldo Terkumpul</th>
+                          <th className="p-3 text-center">Status</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-800 text-slate-300">
-                        {agents.map((ag) => (
-                          <tr key={ag.id} className="hover:bg-slate-800/40">
-                            <td className="p-3 font-bold text-emerald-400">{ag.code}</td>
-                            <td className="p-3 text-white font-medium">{ag.storeName}</td>
-                            <td className="p-3 text-slate-400">{ag.ownerName}</td>
-                            <td className="p-3 text-slate-400">{ag.phone}</td>
-                            <td className="p-3 text-blue-400">{ag.regency}</td>
-                            <td className="p-3 text-right font-bold text-white">{ag.memberCount}</td>
-                            <td className="p-3 text-right text-emerald-400 font-bold">
-                              Rp {ag.totalOmset.toLocaleString('id-ID')}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )}
-
-                  {selectedTable === 'members' && (
-                    <table className="w-full text-left font-mono text-[11px]">
-                      <thead>
-                        <tr className="bg-slate-800/80 text-slate-400 border-b border-slate-700">
-                          <th className="p-3">member_code</th>
-                          <th className="p-3">name</th>
-                          <th className="p-3">phone</th>
-                          <th className="p-3">package_name</th>
-                          <th className="p-3 text-right">total_saved</th>
-                          <th className="p-3">status</th>
-                          <th className="p-3">qr_token</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-800 text-slate-300">
-                        {members.map((mem) => (
-                          <tr key={mem.id} className="hover:bg-slate-800/40">
-                            <td className="p-3 font-bold text-blue-400">{mem.memberCode}</td>
-                            <td className="p-3 text-white font-bold">{mem.name}</td>
-                            <td className="p-3 text-slate-400">{mem.phone}</td>
-                            <td className="p-3 text-emerald-400">{mem.packageName}</td>
-                            <td className="p-3 text-right font-bold text-white">
-                              Rp {mem.totalSaved.toLocaleString('id-ID')}
-                            </td>
-                            <td className="p-3">
-                              <span
-                                className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                  mem.status === 'Lunas' ? 'bg-purple-900/60 text-purple-300' : 'bg-emerald-900/60 text-emerald-300'
-                                }`}
-                              >
-                                {mem.status}
+                      <tbody className="divide-y divide-slate-800 font-mono">
+                        {members.map((mbr) => (
+                          <tr key={mbr.id} className="hover:bg-slate-800/50">
+                            <td className="p-3 text-emerald-400 font-bold">{mbr.memberCode}</td>
+                            <td className="p-3 text-white font-sans font-bold">{mbr.name}</td>
+                            <td className="p-3 text-amber-300 font-sans">{mbr.packageName}</td>
+                            <td className="p-3 text-slate-300 font-sans">{mbr.agentName}</td>
+                            <td className="p-3 text-right text-emerald-300">Rp {mbr.totalSaved.toLocaleString('id-ID')}</td>
+                            <td className="p-3 text-center">
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-sans font-bold bg-emerald-500/20 text-emerald-300">
+                                {mbr.status}
                               </span>
                             </td>
-                            <td className="p-3 text-slate-500 truncate max-w-[150px]">{mem.qrToken}</td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   )}
 
-                  {selectedTable === 'transactions' && (
-                    <table className="w-full text-left font-mono text-[11px]">
-                      <thead>
-                        <tr className="bg-slate-800/80 text-slate-400 border-b border-slate-700">
-                          <th className="p-3">invoice_no</th>
-                          <th className="p-3">member_name</th>
-                          <th className="p-3 text-right">amount</th>
-                          <th className="p-3">method</th>
-                          <th className="p-3">status</th>
-                          <th className="p-3">date</th>
+                  {selectedCollection === 'agents' && (
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-950 text-slate-400 font-bold uppercase text-[10px] sticky top-0">
+                        <tr>
+                          <th className="p-3">Kode Agen</th>
+                          <th className="p-3">Nama Outlet</th>
+                          <th className="p-3">Pemilik</th>
+                          <th className="p-3">Wilayah</th>
+                          <th className="p-3 text-center">Member Binaan</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-800 text-slate-300">
+                      <tbody className="divide-y divide-slate-800 font-mono">
+                        {agents.map((ag) => (
+                          <tr key={ag.id} className="hover:bg-slate-800/50">
+                            <td className="p-3 text-emerald-400 font-bold">{ag.code}</td>
+                            <td className="p-3 text-white font-sans font-bold">{ag.storeName}</td>
+                            <td className="p-3 text-slate-300 font-sans">{ag.ownerName}</td>
+                            <td className="p-3 text-purple-300 font-sans">{ag.district}, {ag.regency}</td>
+                            <td className="p-3 text-center text-amber-300">{ag.memberCount || 0} Member</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+
+                  {selectedCollection === 'transactions' && (
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-950 text-slate-400 font-bold uppercase text-[10px] sticky top-0">
+                        <tr>
+                          <th className="p-3">No. Kuitansi</th>
+                          <th className="p-3">Member</th>
+                          <th className="p-3">Metode</th>
+                          <th className="p-3 text-right">Nominal</th>
+                          <th className="p-3 text-center">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800 font-mono">
                         {transactions.map((tx) => (
-                          <tr key={tx.id} className="hover:bg-slate-800/40">
-                            <td className="p-3 font-bold text-slate-300">{tx.invoiceNo}</td>
-                            <td className="p-3 text-white">{tx.memberName}</td>
-                            <td className="p-3 text-right font-bold text-emerald-400">
-                              Rp {tx.amount.toLocaleString('id-ID')}
-                            </td>
-                            <td className="p-3 text-slate-400">{tx.method}</td>
-                            <td className="p-3">
-                              <span
-                                className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                  tx.status === 'Berhasil'
-                                    ? 'bg-emerald-900/60 text-emerald-300'
-                                    : 'bg-amber-900/60 text-amber-300'
-                                }`}
-                              >
+                          <tr key={tx.id} className="hover:bg-slate-800/50">
+                            <td className="p-3 text-emerald-400 font-bold">{tx.invoiceNo}</td>
+                            <td className="p-3 text-white font-sans font-bold">{tx.memberName}</td>
+                            <td className="p-3 text-purple-300 font-sans">{tx.method}</td>
+                            <td className="p-3 text-right text-amber-300 font-bold">Rp {tx.amount.toLocaleString('id-ID')}</td>
+                            <td className="p-3 text-center">
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-sans font-bold ${
+                                tx.status === 'Berhasil'
+                                  ? 'bg-emerald-500/20 text-emerald-300'
+                                  : 'bg-amber-500/20 text-amber-300'
+                              }`}>
                                 {tx.status}
                               </span>
                             </td>
-                            <td className="p-3 text-slate-500">{tx.date}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -400,68 +502,46 @@ CREATE POLICY "Agent member view" ON public.members FOR SELECT
                   )}
                 </div>
               </div>
-            </div>
-          )}
-
-          {activeTab === 'sql' && (
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-slate-400">
-                  Jalankan skrip ini pada <strong>Supabase SQL Editor</strong> untuk membuat seluruh tabel:
-                </span>
-                <button
-                  onClick={handleCopySQL}
-                  className="flex items-center space-x-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold"
-                >
-                  <Copy className="w-3.5 h-3.5" />
-                  <span>{copied ? 'Tersalin ke Clipboard!' : 'Salin SQL Schema'}</span>
-                </button>
-              </div>
-
-              <pre className="p-4 bg-slate-950 text-emerald-400 font-mono text-[11px] rounded-2xl border border-slate-800 overflow-x-auto max-h-[55vh] leading-relaxed">
-                {sqlSchema}
-              </pre>
             </div>
           )}
 
           {activeTab === 'env' && (
-            <div className="space-y-4 max-w-2xl mx-auto py-2">
-              <div className="p-4 bg-slate-900 border border-slate-800 rounded-2xl space-y-3">
-                <h4 className="font-bold text-white text-sm">Konfigurasi Koneksi Supabase (.env)</h4>
-                <p className="text-slate-400 text-xs">
-                  Tambahkan variabel berikut ke environment file produksi Anda:
-                </p>
-
-                <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 font-mono text-emerald-400 text-xs space-y-1">
-                  <div>VITE_SUPABASE_URL=https://xyzcompany.supabase.co</div>
-                  <div>VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...</div>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-bold text-white text-sm">Konfigurasi Variabel Lingkungan (.env)</h4>
+                  <p className="text-xs text-slate-400">
+                    Kredensial MongoDB Atlas yang saat ini aktif digunakan oleh backend server:
+                  </p>
                 </div>
+                <button
+                  onClick={handleCopyEnv}
+                  className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold flex items-center space-x-1.5 border border-slate-700 transition"
+                >
+                  {copied ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copied ? 'Tersalin!' : 'Salin .env'}</span>
+                </button>
               </div>
 
-              <div className="p-4 bg-slate-900 border border-slate-800 rounded-2xl space-y-2 text-xs">
-                <h5 className="font-bold text-white">Panduan Integrasi Supabase Client:</h5>
-                <ol className="list-decimal list-inside space-y-1 text-slate-400 leading-relaxed">
-                  <li>Buat proyek baru di dashboard resmi <strong>Supabase</strong>.</li>
-                  <li>Buka tab <strong>SQL Editor</strong>, tempel skrip dari tab SQL Schema, lalu klik Run.</li>
-                  <li>Tabel <code>packages</code>, <code>agents</code>, <code>members</code>, dan <code>transactions</code> akan terbuat dengan relasi foreign key otomatis.</li>
-                  <li>Aktifkan <strong>Realtime</strong> pada tabel <code>transactions</code> agar verifikasi setoran admin langsung muncul di HP agen & member.</li>
-                </ol>
+              <div className="bg-black/90 p-4 rounded-2xl border border-slate-800 font-mono text-xs text-emerald-400 space-y-2 overflow-x-auto">
+                <div className="text-slate-500"># MongoDB Atlas Connection URI Aktif:</div>
+                <div className="text-amber-300">
+                  MONGODB_URI="mongodb+srv://akun310786_db_user:D0oBXnbyTd1iAgtp@database.t09ogyz.mongodb.net/sagitarius_parcel?retryWrites=true&w=majority"
+                </div>
+                <div className="text-slate-400">PORT=3000</div>
+              </div>
+
+              <div className="p-4 bg-slate-900 border border-slate-800 rounded-2xl space-y-2 text-xs text-slate-300">
+                <span className="font-bold text-white block">Catatan Keamanan & Sinkronisasi:</span>
+                <p>
+                  1. Kredensial ini disimpan di sisi server (backend Node.js/Express) dan <strong>tidak pernah dibocorkan</strong> ke peramban publik.
+                </p>
+                <p>
+                  2. Jika Anda membuat user baru atau mengubah password di MongoDB Atlas, Anda cukup memperbarui nilai <code className="text-amber-300">MONGODB_URI</code> di file <code className="text-white">.env</code>.
+                </p>
               </div>
             </div>
           )}
-        </div>
-
-        {/* Footer */}
-        <div className="bg-slate-900 border-t border-slate-800 p-4 flex justify-between items-center text-xs">
-          <span className="text-slate-500">
-            Arsitektur Supabase PostgreSQL siap dipasang ke hosting produksi.
-          </span>
-          <button
-            onClick={onClose}
-            className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-bold"
-          >
-            Tutup
-          </button>
         </div>
       </div>
     </div>

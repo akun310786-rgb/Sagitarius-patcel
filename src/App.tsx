@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { UserRole, Member, Transaction, ParcelPackage, Agent } from './types/parcel';
 import { ToastNotification } from './types/toast';
 import { INITIAL_MEMBERS, INITIAL_TRANSACTIONS, PACKAGES, AGENTS } from './data/mockData';
@@ -51,6 +51,41 @@ export default function App() {
   const [isSupabaseModalOpen, setIsSupabaseModalOpen] = useState<boolean>(false);
 
   const activeMember = members.find((m) => m.id === selectedMemberId) || members[0];
+
+  // Load data from Real Database (MongoDB Atlas) backend API
+  useEffect(() => {
+    const fetchRealDbData = async () => {
+      try {
+        const [resPkgs, resMbrs, resAgts, resTrx] = await Promise.all([
+          fetch('/api/packages').catch(() => null),
+          fetch('/api/members').catch(() => null),
+          fetch('/api/agents').catch(() => null),
+          fetch('/api/transactions').catch(() => null)
+        ]);
+
+        if (resPkgs && resPkgs.ok) {
+          const data = await resPkgs.json();
+          if (Array.isArray(data) && data.length > 0) setPackages(data);
+        }
+        if (resMbrs && resMbrs.ok) {
+          const data = await resMbrs.json();
+          if (Array.isArray(data) && data.length > 0) setMembers(data);
+        }
+        if (resAgts && resAgts.ok) {
+          const data = await resAgts.json();
+          if (Array.isArray(data) && data.length > 0) setAgents(data);
+        }
+        if (resTrx && resTrx.ok) {
+          const data = await resTrx.json();
+          if (Array.isArray(data) && data.length > 0) setTransactions(data);
+        }
+      } catch (e) {
+        console.warn('[MongoDB Atlas Sync] Local memory active:', e);
+      }
+    };
+
+    fetchRealDbData();
+  }, []);
 
   // Helper to trigger a toast
   const showToast = (toast: Omit<ToastNotification, 'id' | 'timestamp'>) => {
@@ -127,6 +162,13 @@ export default function App() {
       })
     );
 
+    // Sync transaction and updated member to MongoDB Atlas
+    fetch('/api/transactions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newTx)
+    }).catch((err) => console.warn('Sync transaction error:', err));
+
     showToast({
       title: '📥 Setoran Baru Berhasil Dicatat!',
       message: `${newTx.memberName} berhasil menyetor Rp ${amount.toLocaleString('id-ID')} via ${newTx.method}. Menunggu approval Admin Pusat.`,
@@ -154,6 +196,14 @@ export default function App() {
       })
     );
 
+    if (targetTx) {
+      fetch('/api/transactions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...targetTx, status: 'Berhasil' })
+      }).catch((err) => console.warn('Sync approve error:', err));
+    }
+
     showToast({
       title: 'Transaksi Disetujui! ✅',
       message: `Setoran ${targetTx?.invoiceNo || txId} (${targetTx?.memberName || 'Member'}) senilai Rp ${(targetTx?.amount || 0).toLocaleString('id-ID')} telah disahkan oleh Super Admin.`,
@@ -174,6 +224,14 @@ export default function App() {
         return t;
       })
     );
+
+    if (targetTx) {
+      fetch('/api/transactions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...targetTx, status: 'Ditolak' })
+      }).catch((err) => console.warn('Sync reject error:', err));
+    }
 
     showToast({
       title: 'Transaksi Ditolak! ❌',
@@ -196,6 +254,14 @@ export default function App() {
       })
     );
 
+    if (targetTx) {
+      fetch('/api/transactions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...targetTx, status: 'Berhasil', notes: 'Diverifikasi langsung oleh Korwil Priangan Timur' })
+      }).catch((err) => console.warn('Sync korwil error:', err));
+    }
+
     showToast({
       title: 'Verifikasi Kilat Korwil! ⚡',
       message: `Setoran ${targetTx?.invoiceNo || txId} (${targetTx?.memberName || 'Member'}) dinyatakan valid oleh Korwil Priangan Timur.`,
@@ -217,6 +283,14 @@ export default function App() {
       })
     );
 
+    if (member) {
+      fetch('/api/members', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...member, status: 'Lunas' })
+      }).catch((err) => console.warn('Sync fulfill error:', err));
+    }
+
     showToast({
       title: 'Paket Berhasil Diserahkan! 🎁',
       message: `Paket Idul Fitri untuk ${member?.name || 'Member'} telah diserahkan resmi oleh Agen Binaan.`,
@@ -228,6 +302,13 @@ export default function App() {
   const handleRegisterMember = (newMember: Member) => {
     setMembers((prev) => [newMember, ...prev]);
     setSelectedMemberId(newMember.id);
+
+    // Sync to MongoDB Atlas
+    fetch('/api/members', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newMember)
+    }).catch((err) => console.warn('Sync member error:', err));
 
     showToast({
       title: 'Member Baru Terdaftar! 🎉',
@@ -242,6 +323,13 @@ export default function App() {
     setSelectedAgentId(newAgent.id);
     setCurrentView('agent');
 
+    // Sync to MongoDB Atlas
+    fetch('/api/agents', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newAgent)
+    }).catch((err) => console.warn('Sync agent error:', err));
+
     showToast({
       title: 'Mitra Agen Baru Terdaftar! 🏪',
       message: `Toko ${newAgent.storeName} (${newAgent.ownerName}) resmi menjadi Agen Binaan Sagitarius Parcel.`,
@@ -253,6 +341,13 @@ export default function App() {
   const handleUpdatePackage = (updatedPkg: ParcelPackage) => {
     setPackages((prev) => prev.map((p) => (p.id === updatedPkg.id ? updatedPkg : p)));
 
+    // Sync to MongoDB Atlas
+    fetch('/api/packages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updatedPkg)
+    }).catch((err) => console.warn('Sync package error:', err));
+
     showToast({
       title: 'Katalog Paket Diperbarui! 📦',
       message: `Perubahan pada ${updatedPkg.name} berhasil disimpan dan disinkronkan ke seluruh portal.`,
@@ -263,6 +358,13 @@ export default function App() {
   // Catalog add new package
   const handleAddNewPackage = (newPkg: ParcelPackage) => {
     setPackages((prev) => [...prev, newPkg]);
+
+    // Sync to MongoDB Atlas
+    fetch('/api/packages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newPkg)
+    }).catch((err) => console.warn('Sync new package error:', err));
 
     showToast({
       title: 'Paket Baru Ditambahkan! ✨',

@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ParcelPackage, Agent } from '../types/parcel';
 import { COMPANY_INFO, PAKET_UANG_DATA, BARANG_SATUAN_DATA } from '../data/mockData';
+import heroLuxuryBg from '../assets/images/luxury_hero_bg_1793194496144.jpg';
 import {
   Package,
   Calendar,
@@ -9,6 +10,8 @@ import {
   PhoneCall,
   MapPin,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   CheckCircle2,
   Calculator,
   Search,
@@ -23,7 +26,12 @@ import {
   Banknote,
   Clock,
   Filter,
-  LogIn
+  LogIn,
+  Play,
+  Pause,
+  LayoutGrid,
+  Layers,
+  Eye
 } from 'lucide-react';
 
 interface PublicWebsiteProps {
@@ -57,10 +65,37 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
   const [barangSearch, setBarangSearch] = useState<string>('');
   const [customMoneyRate, setCustomMoneyRate] = useState<number>(5000);
 
+  // Banner slide carousel state
+  const [currentSlide, setCurrentSlide] = useState<number>(0);
+  const [isAutoplay, setIsAutoplay] = useState<boolean>(true);
+  const [catalogViewMode, setCatalogViewMode] = useState<'slide' | 'grid'>('slide');
+
   const filteredPackages =
     selectedCategory === 'all'
       ? packages
       : packages.filter((p) => p.category === selectedCategory);
+
+  // Auto slide interval for banner slider
+  useEffect(() => {
+    if (!isAutoplay || filteredPackages.length <= 1 || catalogViewMode !== 'slide') return;
+    const interval = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % filteredPackages.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [isAutoplay, filteredPackages.length, catalogViewMode]);
+
+  // Reset slide index when category changes
+  useEffect(() => {
+    setCurrentSlide(0);
+  }, [selectedCategory]);
+
+  const handlePrevSlide = () => {
+    setCurrentSlide((prev) => (prev === 0 ? filteredPackages.length - 1 : prev - 1));
+  };
+
+  const handleNextSlide = () => {
+    setCurrentSlide((prev) => (prev === filteredPackages.length - 1 ? 0 : prev + 1));
+  };
 
   const filteredAgents = agents.filter(
     (ag) =>
@@ -188,11 +223,21 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <section className="relative bg-gradient-to-b from-[#18072e] via-[#2a0e4e] to-[#120524] text-white pt-14 pb-20 px-4 sm:px-6 overflow-hidden">
-        {/* Background glow & subtle patterns */}
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(168,85,247,0.2),transparent_60%)] pointer-events-none" />
-        <div className="absolute right-0 top-1/4 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
+      {/* Hero Section with Luxury Background */}
+      <section className="relative bg-gradient-to-b from-[#16062a] via-[#270b4a] to-[#110423] text-white pt-14 pb-20 px-4 sm:px-6 overflow-hidden">
+        {/* Luxury Background Image Layer with Royal Ambiance */}
+        <div className="absolute inset-0 pointer-events-none select-none overflow-hidden">
+          <img
+            src={heroLuxuryBg}
+            alt="Kemewahan Sagitarius Parcel Lebaran"
+            className="w-full h-full object-cover object-top opacity-35 mix-blend-screen scale-105 transform -translate-y-2 filter saturate-125 contrast-110"
+          />
+          {/* Deep Royal Purple Vignettes for Optimal Readability */}
+          <div className="absolute inset-0 bg-gradient-to-r from-[#140428]/95 via-[#230942]/80 to-[#120324]/90" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#110423] via-transparent to-[#140428]/60" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_30%_30%,rgba(245,158,11,0.15),transparent_65%)]" />
+        </div>
+        <div className="absolute right-0 top-1/4 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="max-w-7xl mx-auto relative z-10">
           <div className="max-w-3xl space-y-4">
             <div className="inline-flex items-center space-x-2 bg-purple-900/70 border border-purple-500/40 rounded-full px-3.5 py-1 text-xs text-amber-300 font-medium backdrop-blur-xs">
@@ -668,124 +713,451 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
           </div>
         )}
 
-        {/* VIEW 3: STANDARD PARCEL PACKAGES (BUNDLE FLYER) */}
+        {/* VIEW 3: STANDARD PARCEL PACKAGES (BANNER SLIDE CAROUSEL & OPTIONAL GRID) */}
         {selectedCategory !== 'uang' && selectedCategory !== 'satuan' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {filteredPackages.map((pkg) => (
-              <div
-                key={pkg.id}
-                className="bg-white rounded-3xl border border-purple-100/90 shadow-sm hover:shadow-2xl hover:border-purple-300 transition-all overflow-hidden flex flex-col justify-between"
-              >
-                <div>
-                  {/* Image and Weight Badge */}
-                  <div className="relative h-60 bg-slate-100 overflow-hidden group">
-                    <img
-                      src={pkg.imageUrl}
-                      alt={pkg.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
-                    />
-                    <div className="absolute top-3 left-3 bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 font-black text-[11px] tracking-wider uppercase px-3 py-1 rounded-lg shadow-md border border-amber-300">
-                      {pkg.tag}
-                    </div>
-                    <div className="absolute top-3 right-3 bg-slate-950/85 backdrop-blur-xs text-white text-xs font-semibold px-2.5 py-1 rounded-md">
-                      {pkg.weight}
-                    </div>
-                  </div>
-
-                  {/* Info Content */}
-                  <div className="p-5 sm:p-6 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-purple-900 bg-purple-50 px-2.5 py-0.5 rounded-md border border-purple-200/60">
-                        Paket {pkg.category.toUpperCase()} — {pkg.tier || 'Eksklusif'}
-                      </span>
-                      <span className="text-xs font-mono font-bold text-slate-500">
-                        {pkg.durationDays || 325} Hari Menabung
-                      </span>
-                    </div>
-
-                    <h3 className="text-xl font-black text-slate-900">{pkg.name}</h3>
-                    
-                    {/* Flyer Direct Bonus Badges */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
-                      {pkg.thrBonus && (
-                        <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 flex items-center space-x-2 text-xs">
-                          <Banknote className="w-4 h-4 text-amber-700 shrink-0" />
-                          <div>
-                            <span className="text-[10px] text-amber-800 font-semibold block uppercase">Bonus THR Tunai:</span>
-                            <strong className="text-amber-950 font-bold">{pkg.thrBonus}</strong>
-                          </div>
-                        </div>
-                      )}
-                      {pkg.bonusGift && (
-                        <div className="p-2.5 rounded-xl bg-purple-50 border border-purple-200 flex items-center space-x-2 text-xs">
-                          <Gift className="w-4 h-4 text-purple-700 shrink-0" />
-                          <div>
-                            <span className="text-[10px] text-purple-800 font-semibold block uppercase">Hadiah Langsung:</span>
-                            <strong className="text-purple-950 font-bold truncate block">{pkg.bonusGift}</strong>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    <p className="text-xs text-slate-600 leading-relaxed line-clamp-2">
-                      {pkg.description}
-                    </p>
-
-                    <div className="pt-3 border-t border-purple-100 flex items-baseline justify-between">
-                      <div>
-                        <span className="text-[11px] text-slate-400 block">Total Target Tabungan:</span>
-                        <span className="text-xl font-black text-slate-900 font-mono">
-                          Rp {pkg.targetPrice.toLocaleString('id-ID')}
-                        </span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-[11px] text-slate-400 block">Setoran Harian / Minggu:</span>
-                        <div className="text-sm font-black text-purple-800 font-mono">
-                          Rp {pkg.dailyPayment?.toLocaleString('id-ID') || Math.round(pkg.weeklyPayment / 7).toLocaleString('id-ID')}/hari
-                        </div>
-                        <span className="text-[10px] text-slate-500 font-medium">
-                          (Rp {pkg.weeklyPayment.toLocaleString('id-ID')}/minggu)
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Highlight items preview */}
-                    <div className="pt-2 text-xs space-y-1.5 bg-purple-50/50 p-3.5 rounded-2xl border border-purple-100">
-                      <span className="text-[11px] font-bold text-slate-700 block uppercase">
-                        Komposisi Isi Parcel ({pkg.items.length} Macam):
-                      </span>
-                      {pkg.items.slice(0, 3).map((item, idx) => (
-                        <div key={idx} className="flex items-center space-x-2 text-slate-700">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-purple-700 shrink-0" />
-                          <span className="truncate">{item}</span>
-                        </div>
-                      ))}
-                      {pkg.items.length > 3 && (
-                        <div className="text-[11px] text-purple-700 font-semibold pt-1">
-                          +{pkg.items.length - 3} item lainnya...
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="p-5 sm:p-6 pt-0 flex gap-2.5">
+          <div className="space-y-4">
+            {/* Slide / View Toolbar */}
+            <div className="flex flex-wrap items-center justify-between gap-3 bg-purple-50/80 border border-purple-200/80 rounded-2xl p-3 px-4 text-xs shadow-2xs">
+              <div className="flex items-center gap-3">
+                <span className="px-3 py-1 bg-gradient-to-r from-purple-800 to-indigo-800 text-white font-mono font-bold rounded-lg text-xs shadow-xs">
+                  Paket {Math.min(currentSlide + 1, filteredPackages.length)} / {filteredPackages.length}
+                </span>
+                <span className="text-slate-600 font-medium hidden sm:inline">
+                  {catalogViewMode === 'slide' ? 'Mode Banner Slide (Hemat Ruang)' : 'Mode Tampilan Grid'}
+                </span>
+                {catalogViewMode === 'slide' && (
                   <button
-                    onClick={() => setActivePackageDetail(pkg)}
-                    className="flex-1 py-3 border border-slate-300 hover:bg-purple-50/50 text-slate-800 font-bold text-xs rounded-xl transition"
+                    onClick={() => setIsAutoplay(!isAutoplay)}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-slate-600 hover:text-purple-900 hover:bg-purple-100/70 transition"
+                    title={isAutoplay ? 'Jeda Slide Otomatis' : 'Mulai Putar Otomatis'}
                   >
-                    Lihat Isi Lengkap
+                    {isAutoplay ? (
+                      <>
+                        <Pause className="w-3.5 h-3.5 text-purple-700" />
+                        <span className="text-[11px] font-semibold text-purple-900">Auto Slide Aktif</span>
+                      </>
+                    ) : (
+                      <>
+                        <Play className="w-3.5 h-3.5 text-slate-500" />
+                        <span className="text-[11px] font-semibold text-slate-600">Jeda</span>
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                {catalogViewMode === 'slide' && (
+                  <div className="flex items-center gap-1 mr-2">
+                    <button
+                      onClick={handlePrevSlide}
+                      className="p-2 rounded-xl bg-white border border-purple-200 text-purple-900 hover:bg-purple-100/60 shadow-xs transition"
+                      aria-label="Paket Sebelumnya"
+                      title="Paket Sebelumnya"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={handleNextSlide}
+                      className="p-2 rounded-xl bg-white border border-purple-200 text-purple-900 hover:bg-purple-100/60 shadow-xs transition"
+                      aria-label="Paket Berikutnya"
+                      title="Paket Berikutnya"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+
+                {/* View Mode Toggle */}
+                <div className="flex items-center bg-white p-1 rounded-xl border border-purple-200/80 shadow-xs">
+                  <button
+                    onClick={() => setCatalogViewMode('slide')}
+                    className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition ${
+                      catalogViewMode === 'slide'
+                        ? 'bg-gradient-to-r from-purple-800 to-indigo-800 text-white shadow-xs'
+                        : 'text-slate-600 hover:text-purple-900'
+                    }`}
+                  >
+                    <Layers className="w-3.5 h-3.5" />
+                    <span>Banner Slide</span>
                   </button>
                   <button
-                    onClick={() => onOpenRegister(pkg.id)}
-                    className="flex-1 py-3 bg-gradient-to-r from-purple-800 to-indigo-800 hover:from-purple-900 hover:to-indigo-900 text-white font-bold text-xs rounded-xl shadow-md shadow-purple-900/20 transition"
+                    onClick={() => setCatalogViewMode('grid')}
+                    className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition ${
+                      catalogViewMode === 'grid'
+                        ? 'bg-gradient-to-r from-purple-800 to-indigo-800 text-white shadow-xs'
+                        : 'text-slate-600 hover:text-purple-900'
+                    }`}
                   >
-                    Daftar Paket Ini
+                    <LayoutGrid className="w-3.5 h-3.5" />
+                    <span>Semua Grid</span>
                   </button>
                 </div>
               </div>
-            ))}
+            </div>
+
+            {/* BANNER SLIDE VIEW */}
+            {catalogViewMode === 'slide' && filteredPackages.length > 0 && (
+              (() => {
+                const pkg = filteredPackages[currentSlide] || filteredPackages[0];
+                return (
+                  <div className="space-y-4">
+                    {/* Main Panoramic Banner Card */}
+                    <div className="relative bg-white rounded-3xl border border-purple-200/90 shadow-xl overflow-hidden transition-all duration-300">
+                      <div className="grid grid-cols-1 lg:grid-cols-12 min-h-[380px]">
+                        {/* Left Side: Parcel Visual & Badges */}
+                        <div className="lg:col-span-5 relative min-h-[260px] lg:min-h-full bg-slate-900 overflow-hidden group">
+                          <img
+                            src={pkg.imageUrl}
+                            alt={pkg.name}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-transparent to-black/30 pointer-events-none" />
+
+                          {/* Top Badges */}
+                          <div className="absolute top-4 left-4 right-4 flex items-center justify-between gap-2 pointer-events-none">
+                            <span className="bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 font-black text-xs px-3.5 py-1.5 rounded-xl shadow-lg border border-amber-300 tracking-wider uppercase">
+                              {pkg.tag}
+                            </span>
+                            <span className="bg-slate-950/85 backdrop-blur-md text-amber-300 text-xs font-mono font-bold px-3 py-1.5 rounded-xl border border-white/10 shadow-md">
+                              {pkg.weight}
+                            </span>
+                          </div>
+
+                          {/* Overlay Arrow Buttons on image */}
+                          <div className="absolute inset-y-0 left-2 right-2 flex items-center justify-between pointer-events-none">
+                            <button
+                              onClick={handlePrevSlide}
+                              className="pointer-events-auto p-2.5 rounded-full bg-black/55 hover:bg-black/85 text-white backdrop-blur-md transition transform active:scale-95 border border-white/20 shadow-lg"
+                              aria-label="Sebelumnya"
+                            >
+                              <ChevronLeft className="w-5 h-5" />
+                            </button>
+                            <button
+                              onClick={handleNextSlide}
+                              className="pointer-events-auto p-2.5 rounded-full bg-black/55 hover:bg-black/85 text-white backdrop-blur-md transition transform active:scale-95 border border-white/20 shadow-lg"
+                              aria-label="Berikutnya"
+                            >
+                              <ChevronRight className="w-5 h-5" />
+                            </button>
+                          </div>
+
+                          {/* Bottom Category Pill on image */}
+                          <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between text-xs text-white pointer-events-none">
+                            <span className="bg-purple-950/80 backdrop-blur-md px-3 py-1 rounded-lg border border-purple-400/30 font-bold uppercase text-[11px] text-purple-200">
+                              Paket {pkg.category.toUpperCase()} • {pkg.tier || 'Eksklusif'}
+                            </span>
+                            <span className="text-[11px] font-mono text-purple-200 bg-black/40 backdrop-blur-xs px-2.5 py-1 rounded-md">
+                              {pkg.durationDays || 325} Hari Tabungan
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Right Side: Package Details & CTAs */}
+                        <div className="lg:col-span-7 p-6 sm:p-8 flex flex-col justify-between space-y-5 bg-gradient-to-br from-white via-purple-50/20 to-white">
+                          <div className="space-y-3.5">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[11px] font-extrabold uppercase tracking-widest text-purple-900 bg-purple-100/90 px-3 py-1 rounded-full border border-purple-200/80">
+                                PILIHAN POPULER FLYER RESMI
+                              </span>
+                              <div className="flex items-center space-x-1 text-amber-500">
+                                {'★'.repeat(5)}
+                                <span className="text-xs font-bold text-slate-700 ml-1">4.9/5</span>
+                              </div>
+                            </div>
+
+                            <div>
+                              <h3 className="text-2xl sm:text-3xl font-black text-slate-900 leading-tight">
+                                {pkg.name}
+                              </h3>
+                              <p className="text-xs sm:text-sm text-slate-600 mt-1.5 leading-relaxed">
+                                {pkg.description}
+                              </p>
+                            </div>
+
+                            {/* Flyer Direct Bonus Badges */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                              {pkg.thrBonus && (
+                                <div className="p-3 rounded-2xl bg-amber-50/90 border border-amber-200 flex items-center space-x-2.5 text-xs shadow-2xs">
+                                  <div className="p-2 rounded-xl bg-amber-200/70 text-amber-800 shrink-0">
+                                    <Banknote className="w-4 h-4 text-amber-800" />
+                                  </div>
+                                  <div>
+                                    <span className="text-[10px] text-amber-800 font-bold block uppercase">
+                                      Bonus THR Tunai:
+                                    </span>
+                                    <strong className="text-amber-950 font-black text-xs sm:text-sm">
+                                      {pkg.thrBonus}
+                                    </strong>
+                                  </div>
+                                </div>
+                              )}
+                              {pkg.bonusGift && (
+                                <div className="p-3 rounded-2xl bg-purple-50/90 border border-purple-200 flex items-center space-x-2.5 text-xs shadow-2xs">
+                                  <div className="p-2 rounded-xl bg-purple-200/70 text-purple-800 shrink-0">
+                                    <Gift className="w-4 h-4 text-purple-800" />
+                                  </div>
+                                  <div className="min-w-0">
+                                    <span className="text-[10px] text-purple-800 font-bold block uppercase">
+                                      Hadiah Langsung:
+                                    </span>
+                                    <strong className="text-purple-950 font-black text-xs sm:text-sm truncate block">
+                                      {pkg.bonusGift}
+                                    </strong>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Price / Savings Card */}
+                            <div className="bg-gradient-to-r from-[#1c0836] via-[#2d0e54] to-[#140526] text-white p-4 sm:p-5 rounded-2xl shadow-md border border-purple-700/60 flex flex-wrap items-center justify-between gap-4">
+                              <div>
+                                <span className="text-[11px] text-purple-200 block uppercase font-medium">
+                                  Total Target Tabungan:
+                                </span>
+                                <div className="text-2xl sm:text-3xl font-black text-amber-300 font-mono">
+                                  Rp {pkg.targetPrice.toLocaleString('id-ID')}
+                                </div>
+                              </div>
+                              <div className="sm:text-right border-t sm:border-t-0 sm:border-l border-purple-800/80 pt-2 sm:pt-0 sm:pl-5">
+                                <span className="text-[11px] text-purple-200 block uppercase font-medium">
+                                  Setoran Sangat Ringan:
+                                </span>
+                                <div className="text-lg sm:text-xl font-black text-emerald-300 font-mono">
+                                  Rp {pkg.dailyPayment?.toLocaleString('id-ID') || Math.round(pkg.weeklyPayment / 7).toLocaleString('id-ID')} / hari
+                                </div>
+                                <span className="text-[11px] text-purple-200">
+                                  atau Rp {pkg.weeklyPayment.toLocaleString('id-ID')} / minggu
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Composition Preview */}
+                            <div className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-2xl space-y-1.5 text-xs">
+                              <div className="flex items-center justify-between text-[11px] font-bold text-slate-700 uppercase tracking-wide">
+                                <span>Contoh Isi Paket ({pkg.items.length} Macam Komoditas):</span>
+                                <span className="text-purple-800 font-semibold">{pkg.weight}</span>
+                              </div>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                                {pkg.items.slice(0, 4).map((item, idx) => (
+                                  <div key={idx} className="flex items-center space-x-2 text-slate-700 truncate">
+                                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                    <span className="truncate text-xs">{item}</span>
+                                  </div>
+                                ))}
+                              </div>
+                              {pkg.items.length > 4 && (
+                                <button
+                                  onClick={() => setActivePackageDetail(pkg)}
+                                  className="text-[11px] text-purple-800 hover:text-purple-950 font-bold pt-1 block underline text-left"
+                                >
+                                  +{pkg.items.length - 4} item isi parcel lainnya (Klik untuk melihat)...
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Action Buttons */}
+                          <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                            <button
+                              onClick={() => setActivePackageDetail(pkg)}
+                              className="py-3 px-5 border-2 border-purple-200 hover:border-purple-600 hover:bg-purple-50 text-purple-900 font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5"
+                            >
+                              <Eye className="w-4 h-4" />
+                              <span>Lihat Rincian Lengkap</span>
+                            </button>
+                            <button
+                              onClick={() => onOpenRegister(pkg.id)}
+                              className="flex-1 py-3 px-6 bg-gradient-to-r from-purple-800 via-indigo-800 to-purple-900 hover:from-purple-900 hover:to-indigo-950 text-white font-black text-xs sm:text-sm rounded-xl shadow-lg shadow-purple-900/25 transition transform active:scale-95 flex items-center justify-center gap-2"
+                            >
+                              <span>Daftar Paket Ini Sekarang</span>
+                              <ArrowRight className="w-4 h-4 text-amber-300" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Quick-Access Mini Thumbnail Ribbon (Space-Saving Jump Strip) */}
+                    <div className="bg-white border border-purple-100 rounded-2xl p-3 shadow-xs">
+                      <div className="flex items-center justify-between mb-2 px-1">
+                        <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
+                          <Package className="w-3.5 h-3.5 text-purple-700" />
+                          <span>Pilih Cepat Paket ({filteredPackages.length} Pilihan):</span>
+                        </span>
+                        <div className="flex items-center gap-1">
+                          {filteredPackages.map((_, dotIdx) => (
+                            <button
+                              key={dotIdx}
+                              onClick={() => setCurrentSlide(dotIdx)}
+                              className={`transition-all ${
+                                currentSlide === dotIdx
+                                  ? 'w-6 h-2 bg-purple-700 rounded-full'
+                                  : 'w-2 h-2 bg-slate-300 hover:bg-slate-400 rounded-full'
+                              }`}
+                              aria-label={`Ke slide ${dotIdx + 1}`}
+                            />
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Scrollable Mini Cards Strip */}
+                      <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-0.5">
+                        {filteredPackages.map((itemPkg, itemIdx) => {
+                          const isActive = currentSlide === itemIdx;
+                          return (
+                            <button
+                              key={itemPkg.id}
+                              onClick={() => setCurrentSlide(itemIdx)}
+                              className={`flex items-center space-x-2.5 p-2 rounded-xl border text-left transition shrink-0 min-w-[200px] max-w-[240px] ${
+                                isActive
+                                  ? 'bg-purple-100/90 border-purple-600 shadow-xs ring-2 ring-purple-600/25'
+                                  : 'bg-slate-50 border-slate-200 hover:bg-purple-50/50 hover:border-purple-300'
+                              }`}
+                            >
+                              <img
+                                src={itemPkg.imageUrl}
+                                alt={itemPkg.name}
+                                className="w-10 h-10 rounded-lg object-cover border border-purple-200 shrink-0"
+                              />
+                              <div className="min-w-0 flex-1">
+                                <div className="text-[11px] font-bold text-slate-900 truncate">
+                                  {itemPkg.name}
+                                </div>
+                                <div className="text-[10px] font-mono font-bold text-purple-800">
+                                  Rp {itemPkg.dailyPayment?.toLocaleString('id-ID') || Math.round(itemPkg.weeklyPayment / 7).toLocaleString('id-ID')}/hari
+                                </div>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()
+            )}
+
+            {/* FALLBACK: MULTI-COLUMN GRID VIEW IF USER CLICKS "Semua Grid" */}
+            {catalogViewMode === 'grid' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {filteredPackages.map((pkg) => (
+                  <div
+                    key={pkg.id}
+                    className="bg-white rounded-3xl border border-purple-100/90 shadow-sm hover:shadow-2xl hover:border-purple-300 transition-all overflow-hidden flex flex-col justify-between"
+                  >
+                    <div>
+                      {/* Image and Weight Badge */}
+                      <div className="relative h-60 bg-slate-100 overflow-hidden group">
+                        <img
+                          src={pkg.imageUrl}
+                          alt={pkg.name}
+                          className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                        />
+                        <div className="absolute top-3 left-3 bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 font-black text-[11px] tracking-wider uppercase px-3 py-1 rounded-lg shadow-md border border-amber-300">
+                          {pkg.tag}
+                        </div>
+                        <div className="absolute top-3 right-3 bg-slate-950/85 backdrop-blur-xs text-white text-xs font-semibold px-2.5 py-1 rounded-md">
+                          {pkg.weight}
+                        </div>
+                      </div>
+
+                      {/* Info Content */}
+                      <div className="p-5 sm:p-6 space-y-4">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-bold uppercase tracking-wider text-purple-900 bg-purple-50 px-2.5 py-0.5 rounded-md border border-purple-200/60">
+                            Paket {pkg.category.toUpperCase()} — {pkg.tier || 'Eksklusif'}
+                          </span>
+                          <span className="text-xs font-mono font-bold text-slate-500">
+                            {pkg.durationDays || 325} Hari Menabung
+                          </span>
+                        </div>
+
+                        <h3 className="text-xl font-black text-slate-900">{pkg.name}</h3>
+                        
+                        {/* Flyer Direct Bonus Badges */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                          {pkg.thrBonus && (
+                            <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 flex items-center space-x-2 text-xs">
+                              <Banknote className="w-4 h-4 text-amber-700 shrink-0" />
+                              <div>
+                                <span className="text-[10px] text-amber-800 font-semibold block uppercase">Bonus THR Tunai:</span>
+                                <strong className="text-amber-950 font-bold">{pkg.thrBonus}</strong>
+                              </div>
+                            </div>
+                          )}
+                          {pkg.bonusGift && (
+                            <div className="p-2.5 rounded-xl bg-purple-50 border border-purple-200 flex items-center space-x-2 text-xs">
+                              <Gift className="w-4 h-4 text-purple-700 shrink-0" />
+                              <div>
+                                <span className="text-[10px] text-purple-800 font-semibold block uppercase">Hadiah Langsung:</span>
+                                <strong className="text-purple-950 font-bold truncate block">{pkg.bonusGift}</strong>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        <p className="text-xs text-slate-600 leading-relaxed line-clamp-2">
+                          {pkg.description}
+                        </p>
+
+                        <div className="pt-3 border-t border-purple-100 flex items-baseline justify-between">
+                          <div>
+                            <span className="text-[11px] text-slate-400 block">Total Target Tabungan:</span>
+                            <span className="text-xl font-black text-slate-900 font-mono">
+                              Rp {pkg.targetPrice.toLocaleString('id-ID')}
+                            </span>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-[11px] text-slate-400 block">Setoran Harian / Minggu:</span>
+                            <div className="text-sm font-black text-purple-800 font-mono">
+                              Rp {pkg.dailyPayment?.toLocaleString('id-ID') || Math.round(pkg.weeklyPayment / 7).toLocaleString('id-ID')}/hari
+                            </div>
+                            <span className="text-[10px] text-slate-500 font-medium">
+                              (Rp {pkg.weeklyPayment.toLocaleString('id-ID')}/minggu)
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Highlight items preview */}
+                        <div className="pt-2 text-xs space-y-1.5 bg-purple-50/50 p-3.5 rounded-2xl border border-purple-100">
+                          <span className="text-[11px] font-bold text-slate-700 block uppercase">
+                            Komposisi Isi Parcel ({pkg.items.length} Macam):
+                          </span>
+                          {pkg.items.slice(0, 3).map((item, idx) => (
+                            <div key={idx} className="flex items-center space-x-2 text-slate-700">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-purple-700 shrink-0" />
+                              <span className="truncate">{item}</span>
+                            </div>
+                          ))}
+                          {pkg.items.length > 3 && (
+                            <div className="text-[11px] text-purple-700 font-semibold pt-1">
+                              +{pkg.items.length - 3} item lainnya...
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="p-5 sm:p-6 pt-0 flex gap-2.5">
+                      <button
+                        onClick={() => setActivePackageDetail(pkg)}
+                        className="flex-1 py-3 border border-slate-300 hover:bg-purple-50/50 text-slate-800 font-bold text-xs rounded-xl transition"
+                      >
+                        Lihat Isi Lengkap
+                      </button>
+                      <button
+                        onClick={() => onOpenRegister(pkg.id)}
+                        className="flex-1 py-3 bg-gradient-to-r from-purple-800 to-indigo-800 hover:from-purple-900 hover:to-indigo-900 text-white font-bold text-xs rounded-xl shadow-md shadow-purple-900/20 transition"
+                      >
+                        Daftar Paket Ini
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </section>

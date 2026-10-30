@@ -149,24 +149,7 @@ export default function App() {
   // Deposit completed handler
   const handleDepositComplete = (newTx: Transaction, amount: number) => {
     setTransactions((prev) => [newTx, ...prev]);
-
-    setMembers((prev) =>
-      prev.map((m) => {
-        if (m.id === newTx.memberId) {
-          const newTotal = m.totalSaved + amount;
-          return {
-            ...m,
-            totalSaved: newTotal,
-            lastDepositAmount: amount,
-            lastDepositDate: newTx.date,
-            status: newTotal >= m.packagePrice ? 'Lunas' : 'Aktif'
-          };
-        }
-        return m;
-      })
-    );
-
-    // Sync transaction and updated member to MongoDB Atlas
+    // Keep the balance unchanged until an admin or Korwil approves the deposit.
     safePostJson('/api/transactions', newTx);
 
     showToast({
@@ -184,21 +167,43 @@ export default function App() {
     setCurrentView('deposit');
   };
 
+  const approvePendingTransaction = (txId: string, notes?: string): Transaction | null => {
+    const targetTx = transactions.find((t) => t.id === txId);
+    if (!targetTx || targetTx.status !== 'Menunggu') return null;
+
+    const approvedTx: Transaction = {
+      ...targetTx,
+      status: 'Berhasil',
+      ...(notes ? { notes } : {})
+    };
+
+    setTransactions((prev) =>
+      prev.map((t) => (t.id === txId && t.status === 'Menunggu' ? approvedTx : t))
+    );
+    safePostJson('/api/transactions', approvedTx);
+
+    const targetMember = members.find((m) => m.id === targetTx.memberId);
+    if (targetMember) {
+      const totalSaved = targetMember.totalSaved + targetTx.amount;
+      const updatedMember: Member = {
+        ...targetMember,
+        totalSaved,
+        lastDepositAmount: targetTx.amount,
+        lastDepositDate: targetTx.date,
+        status: totalSaved >= targetMember.packagePrice ? 'Lunas' : 'Aktif'
+      };
+
+      setMembers((prev) => prev.map((m) => (m.id === updatedMember.id ? updatedMember : m)));
+      safePostJson('/api/members', updatedMember);
+    }
+
+    return approvedTx;
+  };
+
   // Admin approves transaction
   const handleApproveTransaction = (txId: string) => {
-    const targetTx = transactions.find((t) => t.id === txId);
-    setTransactions((prev) =>
-      prev.map((t) => {
-        if (t.id === txId) {
-          return { ...t, status: 'Berhasil' };
-        }
-        return t;
-      })
-    );
-
-    if (targetTx) {
-      safePostJson('/api/transactions', { ...targetTx, status: 'Berhasil' });
-    }
+    const targetTx = approvePendingTransaction(txId);
+    if (!targetTx) return;
 
     showToast({
       title: 'Transaksi Disetujui! ✅',
@@ -212,18 +217,16 @@ export default function App() {
   // Admin rejects transaction
   const handleRejectTransaction = (txId: string) => {
     const targetTx = transactions.find((t) => t.id === txId);
+    if (!targetTx || targetTx.status !== 'Menunggu') return;
+
     setTransactions((prev) =>
       prev.map((t) => {
-        if (t.id === txId) {
-          return { ...t, status: 'Ditolak' };
-        }
+        if (t.id === txId && t.status === 'Menunggu') return { ...t, status: 'Ditolak' };
         return t;
       })
     );
 
-    if (targetTx) {
-      safePostJson('/api/transactions', { ...targetTx, status: 'Ditolak' });
-    }
+    safePostJson('/api/transactions', { ...targetTx, status: 'Ditolak' });
 
     showToast({
       title: 'Transaksi Ditolak! ❌',
@@ -236,19 +239,8 @@ export default function App() {
 
   // Korwil rapid verification
   const handleVerifyKorwil = (txId: string) => {
-    const targetTx = transactions.find((t) => t.id === txId);
-    setTransactions((prev) =>
-      prev.map((t) => {
-        if (t.id === txId) {
-          return { ...t, status: 'Berhasil', notes: 'Diverifikasi langsung oleh Korwil Priangan Timur' };
-        }
-        return t;
-      })
-    );
-
-    if (targetTx) {
-      safePostJson('/api/transactions', { ...targetTx, status: 'Berhasil', notes: 'Diverifikasi langsung oleh Korwil Priangan Timur' });
-    }
+    const targetTx = approvePendingTransaction(txId, 'Diverifikasi langsung oleh Korwil Priangan Timur');
+    if (!targetTx) return;
 
     showToast({
       title: 'Verifikasi Kilat Korwil! ⚡',

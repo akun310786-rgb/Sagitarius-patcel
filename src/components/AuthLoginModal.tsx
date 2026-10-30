@@ -19,6 +19,9 @@ interface AuthLoginModalProps {
   initialRole?: UserRole;
 }
 
+const DEMO_AGENT_PASSWORD = 'password123';
+const DEMO_KORWIL_USERNAME = 'korwil@sp.id';
+
 export const AuthLoginModal: React.FC<AuthLoginModalProps> = ({
   onClose,
   onLoginSuccess,
@@ -79,7 +82,7 @@ export const AuthLoginModal: React.FC<AuthLoginModalProps> = ({
         setErrorMessage('Akun admin ini berstatus Non-aktif. Silakan hubungi Super Admin HQ.');
         return;
       }
-      if (matchedAdmin.password && matchedAdmin.password !== pwd) {
+      if (!matchedAdmin.password || matchedAdmin.password !== pwd) {
         setErrorMessage('Password salah. Silakan coba lagi.');
         return;
       }
@@ -106,7 +109,7 @@ export const AuthLoginModal: React.FC<AuthLoginModalProps> = ({
         return;
       }
 
-      if (password && found.password && found.password !== password) {
+      if (!found.password || found.password !== pwd) {
         setErrorMessage('Password salah. Silakan coba lagi.');
         return;
       }
@@ -129,17 +132,26 @@ export const AuthLoginModal: React.FC<AuthLoginModalProps> = ({
         return;
       }
 
+      if (pwd !== DEMO_AGENT_PASSWORD) {
+        setErrorMessage('Password demo agen salah. Gunakan password yang ditampilkan di petunjuk akun demo.');
+        return;
+      }
+
       onLoginSuccess('agent', found.id);
       onClose();
     } else if (selectedRole === 'korwil') {
-      // 4. KORWIL LOGIN
-      if (id.includes('korwil') || id.includes('priangan') || id.includes('budi') || id === 'korwil@sp.id') {
-        onLoginSuccess('korwil');
-        onClose();
-      } else {
-        onLoginSuccess('korwil');
-        onClose();
+      if (id !== DEMO_KORWIL_USERNAME) {
+        setErrorMessage(`Akun demo Korwil tidak ditemukan. Gunakan ${DEMO_KORWIL_USERNAME}.`);
+        return;
       }
+
+      if (pwd !== DEMO_AGENT_PASSWORD) {
+        setErrorMessage('Password demo Korwil salah.');
+        return;
+      }
+
+      onLoginSuccess('korwil');
+      onClose();
     }
   };
 
@@ -268,6 +280,11 @@ export const AuthLoginModal: React.FC<AuthLoginModalProps> = ({
                 placeholder="Masukkan kata sandi akun Anda"
                 className="w-full px-3 py-2.5 border border-slate-300 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-purple-600 font-medium text-xs bg-slate-50/50 text-slate-900"
               />
+              <p className="mt-1 text-[10px] text-slate-500">
+                {selectedRole === 'member' && 'Password akun demo member: password123.'}
+                {selectedRole === 'agent' && 'Password akun demo agen: password123.'}
+                {selectedRole === 'korwil' && `Akun demo: ${DEMO_KORWIL_USERNAME} · password123.`}
+              </p>
             </div>
 
             <button

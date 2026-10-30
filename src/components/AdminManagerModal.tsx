@@ -21,7 +21,7 @@ import {
 interface AdminManagerModalProps {
   onClose: () => void;
   adminAccounts: AdminAccount[];
-  onAddAdmin: (newAdmin: AdminAccount) => void;
+  onAddAdmin: (newAdmin: AdminAccount, password: string) => Promise<boolean>;
   onToggleStatus?: (id: string) => void;
   onDeleteAdmin?: (id: string) => void;
 }
@@ -43,19 +43,11 @@ export const AdminManagerModal: React.FC<AdminManagerModalProps> = ({
   const [phone, setPhone] = useState('');
   const [role, setRole] = useState<'superadmin' | 'admin' | 'finance' | 'staff'>('admin');
   const [showPassword, setShowPassword] = useState(false);
-  const [revealedPasswords, setRevealedPasswords] = useState<Record<string, boolean>>({});
 
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
-  const togglePasswordReveal = (id: string) => {
-    setRevealedPasswords((prev) => ({
-      ...prev,
-      [id]: !prev[id]
-    }));
-  };
-
-  const handleCreateAdmin = (e: React.FormEvent) => {
+  const handleCreateAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
     setSuccessMessage('');
@@ -68,8 +60,8 @@ export const AdminManagerModal: React.FC<AdminManagerModalProps> = ({
       return;
     }
 
-    if (password.length < 5) {
-      setErrorMessage('Kata sandi minimal harus 5 karakter demi keamanan.');
+    if (password.length < 12) {
+      setErrorMessage('Kata sandi minimal harus 12 karakter.');
       return;
     }
 
@@ -94,7 +86,6 @@ export const AdminManagerModal: React.FC<AdminManagerModalProps> = ({
       name: name.trim(),
       username: cleanUsername,
       email: cleanEmail,
-      password: password.trim(),
       phone: phone.trim() || undefined,
       role,
       roleLabel: roleLabels[role] || 'Admin',
@@ -102,7 +93,8 @@ export const AdminManagerModal: React.FC<AdminManagerModalProps> = ({
       status: 'Aktif'
     };
 
-    onAddAdmin(newAdmin);
+    const created = await onAddAdmin(newAdmin, password.trim());
+    if (!created) return;
     setSuccessMessage(`Akun admin ${newAdmin.name} (@${newAdmin.username}) berhasil ditambahkan!`);
 
     // Reset form
@@ -201,10 +193,10 @@ export const AdminManagerModal: React.FC<AdminManagerModalProps> = ({
                 <div>
                   <h4 className="font-bold text-white text-sm flex items-center gap-2">
                     <ShieldAlert className="w-4 h-4 text-amber-400" />
-                    <span>Akses Rahasia Tanpa Tombol Publik</span>
+                    <span>Manajemen Akun Admin</span>
                   </h4>
                   <p className="text-xs text-slate-400 mt-1">
-                    Semua akun admin di bawah ini dapat masuk dari halaman masuk manapun (baik tab Member maupun Mitra) cukup dengan mengetikkan <strong>Username</strong> atau <strong>Email</strong> dan <strong>Password</strong> yang terdaftar.
+                    Password disimpan sebagai hash di server dan tidak ditampilkan kembali setelah akun dibuat.
                   </p>
                 </div>
                 <button
@@ -219,8 +211,7 @@ export const AdminManagerModal: React.FC<AdminManagerModalProps> = ({
               {/* Admin Cards Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                 {adminAccounts.map((adm) => {
-                  const isPrimarySuperAdmin = adm.username === 'admin';
-                  const isRevealed = revealedPasswords[adm.id] || false;
+                  const isPrimarySuperAdmin = adm.id === 'admin-001';
 
                   return (
                     <div
@@ -266,25 +257,6 @@ export const AdminManagerModal: React.FC<AdminManagerModalProps> = ({
                             <Mail className="w-3 h-3 text-slate-400" /> Email:
                           </span>
                           <span className="text-white truncate max-w-[200px]">{adm.email}</span>
-                        </div>
-
-                        <div className="flex items-center justify-between text-slate-300">
-                          <span className="text-slate-500 flex items-center gap-1">
-                            <KeyRound className="w-3 h-3 text-slate-400" /> Password:
-                          </span>
-                          <div className="flex items-center space-x-1.5">
-                            <span className="text-amber-300 font-bold">
-                              {isRevealed ? adm.password : '••••••••'}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => togglePasswordReveal(adm.id)}
-                              className="text-slate-500 hover:text-slate-300 p-0.5"
-                              title={isRevealed ? 'Sembunyikan' : 'Tampilkan'}
-                            >
-                              {isRevealed ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-                            </button>
-                          </div>
                         </div>
 
                         {adm.phone && (
@@ -412,9 +384,10 @@ export const AdminManagerModal: React.FC<AdminManagerModalProps> = ({
                       <input
                         type={showPassword ? 'text' : 'password'}
                         required
+                        minLength={12}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        placeholder="Minimal 5 karakter"
+                        placeholder="Minimal 12 karakter"
                         className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-8 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-hidden focus:border-rose-500 font-mono"
                       />
                       <button

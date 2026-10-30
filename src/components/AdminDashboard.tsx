@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Transaction, ParcelPackage, Agent, Member, AdminAccount } from '../types/parcel';
-import { PACKAGES, AGENTS, INITIAL_ADMINS } from '../data/mockData';
+import { PACKAGES, AGENTS } from '../data/mockData';
 import { AdminManagerModal } from './AdminManagerModal';
 import {
   ShieldAlert,
@@ -46,9 +46,9 @@ interface AdminDashboardProps {
   agents?: Agent[];
   members?: Member[];
   adminAccounts?: AdminAccount[];
-  onAddAdminAccount?: (newAdmin: AdminAccount) => void;
-  onToggleAdminStatus?: (id: string) => void;
-  onDeleteAdminAccount?: (id: string) => void;
+  onAddAdminAccount?: (newAdmin: AdminAccount, password: string) => Promise<boolean>;
+  onToggleAdminStatus?: (id: string) => Promise<void>;
+  onDeleteAdminAccount?: (id: string) => Promise<void>;
   onApproveTransaction: (txId: string) => void;
   onRejectTransaction: (txId: string) => void;
   onViewKuitansi: (tx: Transaction) => void;
@@ -63,7 +63,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   packages = PACKAGES,
   agents = AGENTS,
   members = [],
-  adminAccounts = INITIAL_ADMINS,
+  adminAccounts = [],
   onAddAdminAccount,
   onToggleAdminStatus,
   onDeleteAdminAccount,
@@ -77,7 +77,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 }) => {
   const [adminTab, setAdminTab] = useState<'transaksi' | 'katalog' | 'agen' | 'logistik' | 'admins'>('transaksi');
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
-  const [revealedPasswords, setRevealedPasswords] = useState<Record<string, boolean>>({});
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'Menunggu' | 'Berhasil' | 'Ditolak'>('all');
   const [catalogCategory, setCatalogCategory] = useState<string>('all');
@@ -1042,8 +1041,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             {/* Admin Cards Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {adminAccounts.map((adm) => {
-                const isPrimary = adm.username === 'admin';
-                const isRevealed = revealedPasswords[adm.id] || false;
+                const isPrimary = adm.id === 'admin-001';
 
                 return (
                   <div
@@ -1092,24 +1090,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           <span className="font-semibold text-slate-800 truncate max-w-[170px]">{adm.email}</span>
                         </div>
 
-                        <div className="flex items-center justify-between text-slate-600">
-                          <span className="flex items-center gap-1 text-slate-400">
-                            <KeyRound className="w-3.5 h-3.5" /> Password:
-                          </span>
-                          <div className="flex items-center space-x-1.5">
-                            <span className="font-mono font-bold text-slate-900">
-                              {isRevealed ? adm.password : '••••••••'}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => setRevealedPasswords((prev) => ({ ...prev, [adm.id]: !prev[adm.id] }))}
-                              className="text-slate-400 hover:text-slate-600 p-0.5"
-                              title={isRevealed ? 'Sembunyikan' : 'Tampilkan'}
-                            >
-                              {isRevealed ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                            </button>
-                          </div>
-                        </div>
+                        <div className="text-slate-500 text-[11px]">Kata sandi tersimpan aman dan tidak dapat dilihat.</div>
 
                         {adm.phone && (
                           <div className="flex items-center justify-between text-slate-600">
@@ -1168,9 +1149,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         <AdminManagerModal
           onClose={() => setIsAdminModalOpen(false)}
           adminAccounts={adminAccounts}
-          onAddAdmin={(newAdm) => {
-            if (onAddAdminAccount) onAddAdminAccount(newAdm);
-          }}
+          onAddAdmin={(newAdm, password) => onAddAdminAccount ? onAddAdminAccount(newAdm, password) : Promise.resolve(false)}
           onToggleStatus={onToggleAdminStatus}
           onDeleteAdmin={onDeleteAdminAccount}
         />

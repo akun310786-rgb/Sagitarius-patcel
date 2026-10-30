@@ -18,7 +18,7 @@ import {
 
 interface AgentRegistrationModalProps {
   onClose: () => void;
-  onRegisterAgent: (newAgent: Agent) => void;
+  onRegisterAgent: (newAgent: Agent, password: string) => Promise<Agent | null>;
   onGoToRegisterMember?: (agentId: string) => void;
 }
 
@@ -31,6 +31,7 @@ export const AgentRegistrationModal: React.FC<AgentRegistrationModalProps> = ({
   const [storeName, setStoreName] = useState('');
   const [ownerName, setOwnerName] = useState('');
   const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
   const [district, setDistrict] = useState('');
   const [regency, setRegency] = useState('Kab. Ciamis');
   const [bankName, setBankName] = useState('Bank BRI');
@@ -59,9 +60,9 @@ export const AgentRegistrationModal: React.FC<AgentRegistrationModalProps> = ({
 
   const [registeredAgent, setRegisteredAgent] = useState<Agent | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!storeName.trim() || !ownerName.trim() || !phone.trim()) return;
+    if (!storeName.trim() || !ownerName.trim() || !phone.trim() || password.length < 12) return;
 
     const randomNum = Math.floor(30 + Math.random() * 60);
     const code = `AG-0${randomNum}`;
@@ -80,8 +81,8 @@ export const AgentRegistrationModal: React.FC<AgentRegistrationModalProps> = ({
       status: 'Aktif'
     };
 
-    onRegisterAgent(newAgent);
-    setRegisteredAgent(newAgent);
+    const savedAgent = await onRegisterAgent(newAgent, password);
+    if (savedAgent) setRegisteredAgent(savedAgent);
   };
 
   return (
@@ -339,6 +340,20 @@ export const AgentRegistrationModal: React.FC<AgentRegistrationModalProps> = ({
                       <option value="Kab. Garut">Kab. Garut</option>
                     </select>
                   </div>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Password Akun Agen *</label>
+                  <input
+                    type="password"
+                    required
+                    minLength={12}
+                    autoComplete="new-password"
+                    placeholder="Buat password minimal 12 karakter"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-hidden font-medium"
+                  />
                 </div>
 
                 <div>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { UserRole, Member, Transaction, ParcelPackage, Agent, AdminAccount } from './types/parcel';
+import { UserRole, Member, Transaction, ParcelPackage, Agent, AdminAccount, AuthenticatedUser } from './types/parcel';
 import { ToastNotification } from './types/toast';
-import { INITIAL_MEMBERS, INITIAL_TRANSACTIONS, PACKAGES, AGENTS, INITIAL_ADMINS } from './data/mockData';
+import { INITIAL_MEMBERS, INITIAL_TRANSACTIONS, PACKAGES, AGENTS } from './data/mockData';
 import { PublicWebsite } from './components/PublicWebsite';
 import { MemberDashboard } from './components/MemberDashboard';
 import { MemberDepositFlow } from './components/MemberDepositFlow';
@@ -22,7 +22,7 @@ import { safeFetchJson, safePostJson } from './utils/apiClient';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<UserRole | 'deposit'>('public');
-  const [authSession, setAuthSession] = useState<{ role: UserRole; id?: string; name?: string } | null>(null);
+  const [authSession, setAuthSession] = useState<AuthenticatedUser | null>(null);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState<boolean>(false);
   const [isMobileFrame, setIsMobileFrame] = useState<boolean>(false);
   const [isGuideOpen, setIsGuideOpen] = useState<boolean>(false);
@@ -30,20 +30,11 @@ export default function App() {
   // Dynamic application state
   const [packages, setPackages] = useState<ParcelPackage[]>(PACKAGES);
   const [agents, setAgents] = useState<Agent[]>(AGENTS);
-  const [members, setMembers] = useState<Member[]>(INITIAL_MEMBERS);
-  const [transactions, setTransactions] = useState<Transaction[]>(INITIAL_TRANSACTIONS);
-  const [adminAccounts, setAdminAccounts] = useState<AdminAccount[]>(() => {
-    try {
-      const saved = localStorage.getItem('sp_admins');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch {}
-    return INITIAL_ADMINS;
-  });
-  const [selectedMemberId, setSelectedMemberId] = useState<string>(INITIAL_MEMBERS[0].id);
-  const [selectedAgentId, setSelectedAgentId] = useState<string>(AGENTS[0].id);
+  const [members, setMembers] = useState<Member[]>(import.meta.env.DEV ? INITIAL_MEMBERS : []);
+  const [transactions, setTransactions] = useState<Transaction[]>(import.meta.env.DEV ? INITIAL_TRANSACTIONS : []);
+  const [adminAccounts, setAdminAccounts] = useState<AdminAccount[]>([]);
+  const [selectedMemberId, setSelectedMemberId] = useState<string>(INITIAL_MEMBERS[0]?.id || '');
+  const [selectedAgentId, setSelectedAgentId] = useState<string>(AGENTS[0]?.id || '');
 
   // Toast notifications state
   const [toasts, setToasts] = useState<ToastNotification[]>([]);
@@ -63,32 +54,30 @@ export default function App() {
 
   const activeMember = members.find((m) => m.id === selectedMemberId) || members[0];
 
-  // Load data from Real Database (MongoDB Atlas) backend API with safe fallback
+  const loadPrivateData = async (role: AuthenticatedUser['role']) => {
+    const [loadedMembers, loadedTransactions, loadedAdmins] = await Promise.all([
+      safeFetchJson<Member[]>('/api/members', []),
+      safeFetchJson<Transaction[]>('/api/transactions', []),
+      role === 'admin' ? safeFetchJson<AdminAccount[]>('/api/admins', []) : Promise.resolve([])
+    ]);
+    setMembers(Array.isArray(loadedMembers) ? loadedMembers : []);
+    setTransactions(Array.isArray(loadedTransactions) ? loadedTransactions : []);
+    setAdminAccounts(Array.isArray(loadedAdmins) ? loadedAdmins : []);
+  };
+
+  // Public catalog data loads without a session. Private records load only after server authentication.
   useEffect(() => {
-    const fetchRealDbData = async () => {
-      try {
-        const [loadedPkgs, loadedMbrs, loadedAgts, loadedTrx, loadedAdmins] = await Promise.all([
-          safeFetchJson<ParcelPackage[]>('/api/packages', PACKAGES),
-          safeFetchJson<Member[]>('/api/members', INITIAL_MEMBERS),
-          safeFetchJson<Agent[]>('/api/agents', AGENTS),
-          safeFetchJson<Transaction[]>('/api/transactions', INITIAL_TRANSACTIONS),
-          safeFetchJson<AdminAccount[]>('/api/admins', INITIAL_ADMINS)
-        ]);
-
-        if (Array.isArray(loadedPkgs) && loadedPkgs.length > 0) setPackages(loadedPkgs);
-        if (Array.isArray(loadedMbrs) && loadedMbrs.length > 0) setMembers(loadedMbrs);
-        if (Array.isArray(loadedAgts) && loadedAgts.length > 0) setAgents(loadedAgts);
-        if (Array.isArray(loadedTrx) && loadedTrx.length > 0) setTransactions(loadedTrx);
-        if (Array.isArray(loadedAdmins) && loadedAdmins.length > 0) {
-          setAdminAccounts(loadedAdmins);
-          try { localStorage.setItem('sp_admins', JSON.stringify(loadedAdmins)); } catch {}
-        }
-      } catch (e) {
-        console.warn('[MongoDB Atlas Sync] Local memory fallback active:', e);
-      }
-    };
-
-    fetchRealDbData();
+    try { localStorage.removeItem('sp_admins'); } catch {}
+    safeFetchJson<ParcelPackage[]>('/api/packages', PACKAGES).then(setPackages);
+    safeFetchJson<Agent[]>('/api/agents', AGENTS).then(setAgents);
+    safeFetchJson<{ user: AuthenticatedUser } | null>('/api/auth/me', null).then(async (session) => {
+      if (!session?.user) return;
+      await loadPrivateData(session.user.role);
+      if (session.user.role === 'member') setSelectedMemberId(session.user.id);
+      if (session.user.role === 'agent') setSelectedAgentId(session.user.agentId || session.user.id);
+      setAuthSession(session.user);
+      setCurrentView(session.user.role);
+    });
   }, []);
 
   // Helper to trigger a toast
@@ -275,34 +264,45 @@ export default function App() {
   };
 
   // Register new member
-  const handleRegisterMember = (newMember: Member) => {
-    setMembers((prev) => [newMember, ...prev]);
-    setSelectedMemberId(newMember.id);
-
-    // Sync to MongoDB Atlas
-    safePostJson('/api/members', newMember);
+  const handleRegisterMember = async (newMember: Member, password: string): Promise<Member | null> => {
+    const result = await safePostJson<{ member: Member; user: AuthenticatedUser }>('/api/register/member', { member: newMember, password });
+    if (!result.ok || !result.data?.member || !result.data?.user) {
+      showToast({ title: 'Pendaftaran belum berhasil', message: result.error || 'Silakan coba lagi.', type: 'error' });
+      return null;
+    }
+    const savedMember = result.data.member;
+    setMembers((prev) => [savedMember, ...prev.filter((member) => member.id !== savedMember.id)]);
+    setSelectedMemberId(savedMember.id);
+    setAuthSession(result.data.user);
+    setCurrentView('member');
 
     showToast({
       title: 'Member Baru Terdaftar! 🎉',
-      message: `${newMember.name} (${newMember.memberCode}) telah bergabung dengan paket ${newMember.packageName}.`,
+      message: `${savedMember.name} (${savedMember.memberCode}) telah bergabung dengan paket ${savedMember.packageName}.`,
       type: 'success'
     });
+    return savedMember;
   };
 
   // Register new agent
-  const handleRegisterAgent = (newAgent: Agent) => {
-    setAgents((prev) => [newAgent, ...prev]);
-    setSelectedAgentId(newAgent.id);
+  const handleRegisterAgent = async (newAgent: Agent, password: string): Promise<Agent | null> => {
+    const result = await safePostJson<{ agent: Agent; user: AuthenticatedUser }>('/api/register/agent', { agent: newAgent, password });
+    if (!result.ok || !result.data?.agent || !result.data?.user) {
+      showToast({ title: 'Pendaftaran belum berhasil', message: result.error || 'Silakan coba lagi.', type: 'error' });
+      return null;
+    }
+    const savedAgent = result.data.agent;
+    setAgents((prev) => [savedAgent, ...prev.filter((agent) => agent.id !== savedAgent.id)]);
+    setSelectedAgentId(savedAgent.id);
+    setAuthSession(result.data.user);
     setCurrentView('agent');
-
-    // Sync to MongoDB Atlas
-    safePostJson('/api/agents', newAgent);
 
     showToast({
       title: 'Mitra Agen Baru Terdaftar! 🏪',
-      message: `Toko ${newAgent.storeName} (${newAgent.ownerName}) resmi menjadi Agen Binaan Sagitarius Parcel.`,
+      message: `Toko ${savedAgent.storeName} (${savedAgent.ownerName}) resmi menjadi Agen Binaan Sagitarius Parcel.`,
       type: 'success'
     });
+    return savedAgent;
   };
 
   // Catalog update package
@@ -334,42 +334,34 @@ export default function App() {
   };
 
   // Admin account management handlers
-  const handleAddAdminAccount = (newAdmin: AdminAccount) => {
-    setAdminAccounts((prev) => {
-      const updated = [...prev, newAdmin];
-      try { localStorage.setItem('sp_admins', JSON.stringify(updated)); } catch {}
-      return updated;
-    });
-    safePostJson('/api/admins', newAdmin);
+  const handleAddAdminAccount = async (newAdmin: AdminAccount, password: string): Promise<boolean> => {
+    const result = await safePostJson<AdminAccount>('/api/admins', { ...newAdmin, password });
+    if (!result.ok) {
+      showToast({ title: 'Akun admin belum tersimpan', message: result.error || 'Silakan coba lagi.', type: 'error' });
+      return false;
+    }
+    setAdminAccounts((prev) => [result.data, ...prev]);
     showToast({
       title: 'Akun Admin Baru Ditambahkan! 🛡️',
       message: `${newAdmin.name} (@${newAdmin.username}) resmi didaftarkan sebagai ${newAdmin.roleLabel}.`,
       type: 'success'
     });
+    return true;
   };
 
-  const handleToggleAdminStatus = (id: string) => {
-    setAdminAccounts((prev) => {
-      const updated = prev.map((a) => {
-        if (a.id === id) {
-          const nextStatus = a.status === 'Aktif' ? ('Non-aktif' as const) : ('Aktif' as const);
-          const modified = { ...a, status: nextStatus };
-          safePostJson('/api/admins', modified);
-          return modified;
-        }
-        return a;
-      });
-      try { localStorage.setItem('sp_admins', JSON.stringify(updated)); } catch {}
-      return updated;
-    });
+  const handleToggleAdminStatus = async (id: string) => {
+    const account = adminAccounts.find((item) => item.id === id);
+    if (!account) return;
+    const nextStatus = account.status === 'Aktif' ? 'Non-aktif' : 'Aktif';
+    const result = await safePostJson<AdminAccount>('/api/admins', { ...account, status: nextStatus });
+    if (!result.ok) { showToast({ title: 'Status akun gagal diperbarui', message: result.error || 'Silakan coba lagi.', type: 'error' }); return; }
+    setAdminAccounts((prev) => prev.map((item) => item.id === id ? result.data : item));
   };
 
-  const handleDeleteAdminAccount = (id: string) => {
-    setAdminAccounts((prev) => {
-      const updated = prev.filter((a) => a.id !== id);
-      try { localStorage.setItem('sp_admins', JSON.stringify(updated)); } catch {}
-      return updated;
-    });
+  const handleDeleteAdminAccount = async (id: string) => {
+    const result = await fetch(`/api/admins/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    if (!result.ok) { showToast({ title: 'Akun admin gagal dinonaktifkan', message: 'Silakan coba lagi.', type: 'error' }); return; }
+    setAdminAccounts((prev) => prev.filter((a) => a.id !== id));
     showToast({
       title: 'Akun Admin Dihapus',
       message: 'Akun pengurus admin telah dinonaktifkan dari sistem.',
@@ -378,34 +370,21 @@ export default function App() {
   };
 
   // Handle Login Success from AuthLoginModal
-  const handleLoginSuccess = (role: UserRole, targetId?: string) => {
-    let userName = 'Pengguna';
-    if (role === 'member') {
-      const m = members.find((x) => x.id === targetId) || members[0];
-      setSelectedMemberId(m.id);
-      userName = m.name;
-    } else if (role === 'agent') {
-      const a = agents.find((x) => x.id === targetId) || agents[0];
-      setSelectedAgentId(a.id);
-      userName = `${a.ownerName} (${a.storeName})`;
-    } else if (role === 'korwil') {
-      userName = 'Budi Santoso (Korwil Priangan Timur)';
-    } else if (role === 'admin') {
-      const adm = adminAccounts.find((x) => x.id === targetId || x.username === targetId);
-      userName = adm ? `${adm.name} (${adm.roleLabel || 'Super Admin HQ'})` : 'Super Admin Pusat';
-    }
-
-    setAuthSession({ role, id: targetId, name: userName });
-    setCurrentView(role);
+  const handleLoginSuccess = async (user: AuthenticatedUser) => {
+    await loadPrivateData(user.role);
+    if (user.role === 'member') setSelectedMemberId(user.id);
+    if (user.role === 'agent') setSelectedAgentId(user.agentId || user.id);
+    setAuthSession(user);
+    setCurrentView(user.role);
 
     showToast({
-      title: `Selamat Datang, ${userName}! 👋`,
+      title: `Selamat Datang, ${user.name}! 👋`,
       message: `Berhasil masuk ke Dashboard ${
-        role === 'member'
+        user.role === 'member'
           ? 'Buku Tabungan'
-          : role === 'agent'
+          : user.role === 'agent'
           ? 'Mitra Agen'
-          : role === 'korwil'
+          : user.role === 'korwil'
           ? 'Korwil'
           : 'Admin Pusat'
       }.`,
@@ -414,9 +393,13 @@ export default function App() {
   };
 
   // Handle Logout
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await safePostJson('/api/auth/logout', {});
     setAuthSession(null);
     setCurrentView('public');
+    setMembers([]);
+    setTransactions([]);
+    setAdminAccounts([]);
 
     showToast({
       title: 'Berhasil Keluar',
@@ -510,8 +493,6 @@ export default function App() {
                 onOpenQR={() => setQrMember(activeMember)}
                 onViewKuitansi={(tx) => setKuitansiTx(tx)}
                 onOpenPackageDetail={(pkg) => setPackageDetailModal(pkg)}
-                allMembers={members}
-                onSelectMember={(id) => setSelectedMemberId(id)}
                 onLogout={handleLogout}
               />
             ) : (
@@ -717,9 +698,6 @@ export default function App() {
         <AuthLoginModal
           onClose={() => setIsLoginModalOpen(false)}
           onLoginSuccess={handleLoginSuccess}
-          members={members}
-          agents={agents}
-          adminAccounts={adminAccounts}
           initialRole={currentView === 'public' || currentView === 'deposit' ? 'member' : currentView}
         />
       )}
@@ -747,9 +725,7 @@ export default function App() {
           agents={agents}
           defaultPackageId={registerPackageId}
           onClose={() => setIsRegisterModalOpen(false)}
-          onRegister={(newM) => {
-            handleRegisterMember(newM);
-          }}
+          onRegister={handleRegisterMember}
           onGoToDeposit={(memberId) => {
             setSelectedMemberId(memberId);
             setIsRegisterModalOpen(false);

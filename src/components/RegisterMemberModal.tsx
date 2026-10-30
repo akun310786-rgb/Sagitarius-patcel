@@ -18,7 +18,7 @@ import {
 
 interface RegisterMemberModalProps {
   onClose: () => void;
-  onRegister: (newMember: Member) => void;
+  onRegister: (newMember: Member, password: string) => Promise<Member | null>;
   onGoToDeposit?: (memberId: string) => void;
   defaultPackageId?: string;
   packages?: ParcelPackage[];
@@ -53,9 +53,9 @@ export const RegisterMemberModal: React.FC<RegisterMemberModalProps> = ({
   const weeklyRate = selectedPkg.weeklyPayment || Math.round(selectedPkg.targetPrice / 45);
   const monthlyRate = Math.round(selectedPkg.targetPrice / 10);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !phone.trim()) return;
+    if (!name.trim() || !phone.trim() || password.length < 12) return;
 
     const randomIdNumber = Math.floor(1000 + Math.random() * 9000);
     const newMemberId = `mem-${Date.now()}`;
@@ -69,7 +69,6 @@ export const RegisterMemberModal: React.FC<RegisterMemberModalProps> = ({
       phone: phone.trim(),
       username: generatedUsername,
       email: generatedEmail,
-      password: password.trim() || 'password123',
       address: address.trim() || 'Jl. Raya Ciamis No. 10',
       regency,
       agentId: selectedAgent.id,
@@ -86,8 +85,8 @@ export const RegisterMemberModal: React.FC<RegisterMemberModalProps> = ({
       qrToken: `QR-20261026-${randomIdNumber}-${name.toUpperCase().replace(/\s+/g, '-')}`
     };
 
-    onRegister(newMember);
-    setRegisteredMember(newMember);
+    const savedMember = await onRegister(newMember, password);
+    if (savedMember) setRegisteredMember(savedMember);
   };
 
   return (
@@ -294,9 +293,11 @@ export const RegisterMemberModal: React.FC<RegisterMemberModalProps> = ({
                     </label>
                     <input
                       type="password"
+                      required
+                      minLength={12}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Min. 6 karakter"
+                      placeholder="Minimal 12 karakter"
                       className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-emerald-500 text-xs bg-white"
                     />
                   </div>

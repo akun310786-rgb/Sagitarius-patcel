@@ -38,8 +38,6 @@ interface MemberDashboardProps {
   onOpenQR: () => void;
   onViewKuitansi: (tx: Transaction) => void;
   onOpenPackageDetail: (pkg: ParcelPackage) => void;
-  allMembers?: Member[];
-  onSelectMember?: (memberId: string) => void;
   onLogout?: () => void;
 }
 
@@ -50,64 +48,9 @@ export const MemberDashboard: React.FC<MemberDashboardProps> = ({
   onOpenQR,
   onViewKuitansi,
   onOpenPackageDetail,
-  allMembers = [],
-  onSelectMember,
   onLogout
 }) => {
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(true);
-  const [loginIdentifier, setLoginIdentifier] = useState<string>('');
-  const [loginPassword, setLoginPassword] = useState<string>('');
-  const [loginError, setLoginError] = useState<string>('');
-
   const [statusFilter, setStatusFilter] = useState<'all' | 'Berhasil' | 'Menunggu'>('all');
-
-  const handleLogin = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    setLoginError('');
-
-    const query = loginIdentifier.trim().toLowerCase();
-    if (!query) {
-      setLoginError('Silakan masukkan email atau username Anda.');
-      return;
-    }
-
-    const memberPool = allMembers && allMembers.length > 0 ? allMembers : [member];
-    const found = memberPool.find((m) => {
-      const emailMatch = m.email && m.email.toLowerCase() === query;
-      const usernameMatch = m.username && m.username.toLowerCase() === query;
-      const phoneMatch = m.phone.replace(/[^0-9]/g, '') === query.replace(/[^0-9]/g, '');
-      const codeMatch = m.memberCode.toLowerCase() === query;
-      const nameMatch = m.name.toLowerCase() === query;
-      return emailMatch || usernameMatch || phoneMatch || codeMatch || nameMatch;
-    });
-
-    if (!found) {
-      setLoginError('Akun member tidak ditemukan. Periksa email atau username Anda.');
-      return;
-    }
-
-    // Verify password if set
-    if (loginPassword && found.password && found.password !== loginPassword) {
-      setLoginError('Password tidak sesuai. Silakan coba lagi.');
-      return;
-    }
-
-    if (onSelectMember) {
-      onSelectMember(found.id);
-    }
-    setIsLoggedIn(true);
-    setLoginError('');
-  };
-
-  const handleQuickDemoLogin = (targetMember: Member) => {
-    if (onSelectMember) {
-      onSelectMember(targetMember.id);
-    }
-    setLoginIdentifier(targetMember.email || targetMember.username || targetMember.memberCode);
-    setLoginPassword(targetMember.password || 'password123');
-    setIsLoggedIn(true);
-    setLoginError('');
-  };
 
   const filteredTransactions = transactions.filter((t) => {
     if (statusFilter === 'all') return true;
@@ -144,103 +87,6 @@ export const MemberDashboard: React.FC<MemberDashboardProps> = ({
     .join('')
     .substring(0, 2)
     .toUpperCase() || 'MB';
-
-  if (!isLoggedIn) {
-    return (
-      <div className="bg-[#fbf9fd] min-h-[calc(100vh-80px)] py-10 px-4 sm:px-6 flex items-center justify-center">
-        <div className="max-w-md w-full bg-white rounded-3xl border border-slate-200/90 shadow-xl overflow-hidden animate-in fade-in">
-          {/* Card Header */}
-          <div className="bg-gradient-to-r from-[#1c0836] via-[#2d0e54] to-[#150628] text-white p-6 text-center relative">
-            <img
-              src="/assets/aistudio/file_00000000ca58820ba2ac5348f000d329_d1d25037.png"
-              alt="Sagitarius Parcel Logo"
-              className="w-16 h-16 rounded-2xl object-contain mx-auto mb-3 shadow-lg border border-purple-400/30 bg-black"
-            />
-            <span className="text-[10px] font-bold tracking-widest text-amber-300 uppercase block mb-1">
-              PORTAL BUKU TABUNGAN DIGITAL
-            </span>
-            <h2 className="text-xl font-black text-white">Verifikasi Login Member</h2>
-            <p className="text-xs text-purple-200 mt-1">
-              Masukkan email atau username dan password untuk melihat data tabungan, histori setoran, dan progres target paket.
-            </p>
-          </div>
-
-          {/* Form */}
-          <form onSubmit={handleLogin} className="p-6 space-y-4 text-xs">
-            {loginError && (
-              <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl flex items-center gap-2 text-xs">
-                <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
-                <span>{loginError}</span>
-              </div>
-            )}
-
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">
-                Email / Username / No. ID Member *
-              </label>
-              <input
-                type="text"
-                required
-                value={loginIdentifier}
-                onChange={(e) => setLoginIdentifier(e.target.value)}
-                placeholder="Contoh: siti@gmail.com atau sitirahma"
-                className="w-full px-3 py-2.5 border border-slate-300 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-purple-600 font-medium text-xs bg-slate-50/50"
-              />
-            </div>
-
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">
-                Password Akun *
-              </label>
-              <input
-                type="password"
-                required
-                value={loginPassword}
-                onChange={(e) => setLoginPassword(e.target.value)}
-                placeholder="Masukkan password akun Anda"
-                className="w-full px-3 py-2.5 border border-slate-300 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-purple-600 font-medium text-xs bg-slate-50/50"
-              />
-            </div>
-
-            <button
-              type="submit"
-              className="w-full py-3 bg-gradient-to-r from-purple-800 via-indigo-800 to-purple-900 hover:from-purple-900 hover:via-indigo-900 hover:to-slate-950 text-white font-bold rounded-xl text-xs shadow-md transition flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <Unlock className="w-4 h-4" />
-              <span>Verifikasi & Masuk Dashboard</span>
-            </button>
-
-            {/* Quick Demo Login selector */}
-            <div className="pt-3 border-t border-slate-100">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2 text-center">
-                Atau Masuk Cepat dengan Akun Terdaftar:
-              </span>
-              <div className="space-y-1.5">
-                {(allMembers && allMembers.length > 0 ? allMembers : [member]).slice(0, 4).map((m) => (
-                  <button
-                    key={m.id}
-                    type="button"
-                    onClick={() => handleQuickDemoLogin(m)}
-                    className="w-full p-2.5 rounded-xl border border-slate-200 hover:border-purple-500 bg-slate-50 hover:bg-purple-50/50 flex items-center justify-between transition text-left cursor-pointer"
-                  >
-                    <div>
-                      <strong className="text-slate-900 block text-xs">{m.name}</strong>
-                      <span className="text-[10px] text-slate-500 font-mono">
-                        {m.email || `${m.memberCode.toLowerCase()}@member.sp`} · {m.packageName}
-                      </span>
-                    </div>
-                    <span className="text-[10px] font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-md shrink-0">
-                      Pilih
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </form>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="bg-[#f8fafc] min-h-screen pb-16">
@@ -325,29 +171,12 @@ export const MemberDashboard: React.FC<MemberDashboardProps> = ({
           </div>
 
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-            {onSelectMember && allMembers && allMembers.length > 1 && (
-              <div className="flex items-center space-x-1.5 bg-slate-100 px-2.5 py-1.5 rounded-xl border border-slate-200 text-xs">
-                <span className="text-[10px] text-slate-500 font-semibold">Ganti Akun:</span>
-                <select
-                  value={member.id}
-                  onChange={(e) => onSelectMember(e.target.value)}
-                  className="bg-white font-medium text-slate-800 px-2 py-1 rounded-lg border border-slate-300 text-xs focus:outline-hidden"
-                >
-                  {allMembers.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.name} ({m.memberCode} - {m.packageName})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
             <button
               onClick={() => {
                 if (onLogout) {
                   onLogout();
                 } else {
-                  setIsLoggedIn(false);
+                  return;
                 }
               }}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-rose-50 hover:text-rose-700 text-slate-600 text-xs font-semibold rounded-xl border border-slate-200 transition"

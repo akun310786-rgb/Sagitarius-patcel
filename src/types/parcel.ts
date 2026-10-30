@@ -1,5 +1,12 @@
 export type UserRole = 'public' | 'member' | 'agent' | 'korwil' | 'admin';
 
+export interface AuthenticatedUser {
+  id: string;
+  role: Exclude<UserRole, 'public'>;
+  name: string;
+  agentId?: string;
+}
+
 export interface ParcelPackage {
   id: string;
   name: string;
@@ -39,7 +46,6 @@ export interface Member {
   phone: string;
   email?: string;
   username?: string;
-  password?: string;
   address: string;
   regency: string;
   agentId: string;
@@ -85,7 +91,6 @@ export interface AdminAccount {
   name: string;
   username: string;
   email: string;
-  password?: string;
   role: 'superadmin' | 'admin' | 'finance' | 'staff';
   roleLabel: string;
   phone?: string;

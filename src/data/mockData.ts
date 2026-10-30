@@ -1,4 +1,4 @@
-import { ParcelPackage, Agent, Member, Transaction, KorwilRegion } from '../types/parcel';
+import { ParcelPackage, Agent, Member, Transaction, KorwilRegion, AdminAccount } from '../types/parcel';
 
 export const COMPANY_INFO = {
   name: 'PT. SAGITARIUS TRINUNGGAL KARYA',
@@ -778,4 +778,19 @@ export const KORWIL_REGIONS: KorwilRegion[] = [
   { id: 'reg-tasik', name: 'Tasikmalaya', currentAmount: 41000000, targetAmount: 50000000 },
   { id: 'reg-pangandaran', name: 'Pangandaran', currentAmount: 24000000, targetAmount: 35000000 },
   { id: 'reg-garut', name: 'Garut', currentAmount: 18000000, targetAmount: 30000000 }
+];
+
+export const INITIAL_ADMINS: AdminAccount[] = [
+  {
+    id: 'admin-001',
+    name: 'Super Admin Pusat',
+    username: 'admin',
+    email: 'admin@sagitariusparcel.com',
+    password: 'admin123',
+    role: 'superadmin',
+    roleLabel: 'Super Admin HQ',
+    phone: '0813-2438-3479',
+    createdAt: '2026-01-01',
+    status: 'Aktif'
+  }
 ];

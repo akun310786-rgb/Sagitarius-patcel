@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { UserRole, Member, Transaction, ParcelPackage, Agent } from './types/parcel';
+import { UserRole, Member, Transaction, ParcelPackage, Agent, AdminAccount } from './types/parcel';
 import { ToastNotification } from './types/toast';
-import { INITIAL_MEMBERS, INITIAL_TRANSACTIONS, PACKAGES, AGENTS } from './data/mockData';
+import { INITIAL_MEMBERS, INITIAL_TRANSACTIONS, PACKAGES, AGENTS, INITIAL_ADMINS } from './data/mockData';
 import { PublicWebsite } from './components/PublicWebsite';
 import { MemberDashboard } from './components/MemberDashboard';
 import { MemberDepositFlow } from './components/MemberDepositFlow';
@@ -32,6 +32,16 @@ export default function App() {
   const [agents, setAgents] = useState<Agent[]>(AGENTS);
   const [members, setMembers] = useState<Member[]>(INITIAL_MEMBERS);
   const [transactions, setTransactions] = useState<Transaction[]>(INITIAL_TRANSACTIONS);
+  const [adminAccounts, setAdminAccounts] = useState<AdminAccount[]>(() => {
+    try {
+      const saved = localStorage.getItem('sp_admins');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return INITIAL_ADMINS;
+  });
   const [selectedMemberId, setSelectedMemberId] = useState<string>(INITIAL_MEMBERS[0].id);
   const [selectedAgentId, setSelectedAgentId] = useState<string>(AGENTS[0].id);
 
@@ -57,17 +67,22 @@ export default function App() {
   useEffect(() => {
     const fetchRealDbData = async () => {
       try {
-        const [loadedPkgs, loadedMbrs, loadedAgts, loadedTrx] = await Promise.all([
+        const [loadedPkgs, loadedMbrs, loadedAgts, loadedTrx, loadedAdmins] = await Promise.all([
           safeFetchJson<ParcelPackage[]>('/api/packages', PACKAGES),
           safeFetchJson<Member[]>('/api/members', INITIAL_MEMBERS),
           safeFetchJson<Agent[]>('/api/agents', AGENTS),
-          safeFetchJson<Transaction[]>('/api/transactions', INITIAL_TRANSACTIONS)
+          safeFetchJson<Transaction[]>('/api/transactions', INITIAL_TRANSACTIONS),
+          safeFetchJson<AdminAccount[]>('/api/admins', INITIAL_ADMINS)
         ]);
 
         if (Array.isArray(loadedPkgs) && loadedPkgs.length > 0) setPackages(loadedPkgs);
         if (Array.isArray(loadedMbrs) && loadedMbrs.length > 0) setMembers(loadedMbrs);
         if (Array.isArray(loadedAgts) && loadedAgts.length > 0) setAgents(loadedAgts);
         if (Array.isArray(loadedTrx) && loadedTrx.length > 0) setTransactions(loadedTrx);
+        if (Array.isArray(loadedAdmins) && loadedAdmins.length > 0) {
+          setAdminAccounts(loadedAdmins);
+          try { localStorage.setItem('sp_admins', JSON.stringify(loadedAdmins)); } catch {}
+        }
       } catch (e) {
         console.warn('[MongoDB Atlas Sync] Local memory fallback active:', e);
       }
@@ -326,6 +341,50 @@ export default function App() {
     });
   };
 
+  // Admin account management handlers
+  const handleAddAdminAccount = (newAdmin: AdminAccount) => {
+    setAdminAccounts((prev) => {
+      const updated = [...prev, newAdmin];
+      try { localStorage.setItem('sp_admins', JSON.stringify(updated)); } catch {}
+      return updated;
+    });
+    safePostJson('/api/admins', newAdmin);
+    showToast({
+      title: 'Akun Admin Baru Ditambahkan! 🛡️',
+      message: `${newAdmin.name} (@${newAdmin.username}) resmi didaftarkan sebagai ${newAdmin.roleLabel}.`,
+      type: 'success'
+    });
+  };
+
+  const handleToggleAdminStatus = (id: string) => {
+    setAdminAccounts((prev) => {
+      const updated = prev.map((a) => {
+        if (a.id === id) {
+          const nextStatus = a.status === 'Aktif' ? ('Non-aktif' as const) : ('Aktif' as const);
+          const modified = { ...a, status: nextStatus };
+          safePostJson('/api/admins', modified);
+          return modified;
+        }
+        return a;
+      });
+      try { localStorage.setItem('sp_admins', JSON.stringify(updated)); } catch {}
+      return updated;
+    });
+  };
+
+  const handleDeleteAdminAccount = (id: string) => {
+    setAdminAccounts((prev) => {
+      const updated = prev.filter((a) => a.id !== id);
+      try { localStorage.setItem('sp_admins', JSON.stringify(updated)); } catch {}
+      return updated;
+    });
+    showToast({
+      title: 'Akun Admin Dihapus',
+      message: 'Akun pengurus admin telah dinonaktifkan dari sistem.',
+      type: 'info'
+    });
+  };
+
   // Handle Login Success from AuthLoginModal
   const handleLoginSuccess = (role: UserRole, targetId?: string) => {
     let userName = 'Pengguna';
@@ -340,7 +399,8 @@ export default function App() {
     } else if (role === 'korwil') {
       userName = 'Budi Santoso (Korwil Priangan Timur)';
     } else if (role === 'admin') {
-      userName = 'Super Admin HQ';
+      const adm = adminAccounts.find((x) => x.id === targetId || x.username === targetId);
+      userName = adm ? `${adm.name} (${adm.roleLabel || 'Super Admin HQ'})` : 'Super Admin Pusat';
     }
 
     setAuthSession({ role, id: targetId, name: userName });
@@ -581,6 +641,10 @@ export default function App() {
                 packages={packages}
                 agents={agents}
                 members={members}
+                adminAccounts={adminAccounts}
+                onAddAdminAccount={handleAddAdminAccount}
+                onToggleAdminStatus={handleToggleAdminStatus}
+                onDeleteAdminAccount={handleDeleteAdminAccount}
                 onApproveTransaction={handleApproveTransaction}
                 onRejectTransaction={handleRejectTransaction}
                 onViewKuitansi={(tx) => setKuitansiTx(tx)}
@@ -640,7 +704,7 @@ export default function App() {
           <button
             onClick={() => setIsSupabaseModalOpen(true)}
             className="flex items-center space-x-1.5 bg-slate-900 hover:bg-slate-800 text-emerald-400 font-bold px-3.5 py-2 rounded-full shadow-xl transition transform hover:scale-105 border border-emerald-500/40 text-xs"
-            title="Lihat Database PostgreSQL"
+            title="Lihat Database Sagitarius"
           >
             <span>⚡</span>
             <span>Lihat Database</span>
@@ -663,6 +727,7 @@ export default function App() {
           onLoginSuccess={handleLoginSuccess}
           members={members}
           agents={agents}
+          adminAccounts={adminAccounts}
           initialRole={currentView === 'public' || currentView === 'deposit' ? 'member' : currentView}
         />
       )}

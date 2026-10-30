@@ -12,6 +12,8 @@ import {
   saveAgent,
   getAllTransactions,
   saveTransaction,
+  getAllAdmins,
+  saveAdmin,
   forceSeed,
   getDb
 } from './src/server/db.js';
@@ -131,6 +133,25 @@ app.get('/api/transactions', async (req: Request, res: Response) => {
 app.post('/api/transactions', async (req: Request, res: Response) => {
   try {
     const saved = await saveTransaction(req.body);
+    res.json(saved);
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message });
+  }
+});
+
+// Admins
+app.get('/api/admins', async (req: Request, res: Response) => {
+  try {
+    const admins = await getAllAdmins();
+    res.json(admins);
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message });
+  }
+});
+
+app.post('/api/admins', async (req: Request, res: Response) => {
+  try {
+    const saved = await saveAdmin(req.body);
     res.json(saved);
   } catch (err: any) {
     res.status(500).json({ error: err?.message });

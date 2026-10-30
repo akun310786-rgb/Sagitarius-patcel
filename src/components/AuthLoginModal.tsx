@@ -1,18 +1,13 @@
 import React, { useState } from 'react';
-import { Member, Agent, UserRole } from '../types/parcel';
+import { Member, Agent, UserRole, AdminAccount } from '../types/parcel';
 import {
   X,
   User,
   Store,
   MapPin,
-  ShieldCheck,
-  Lock,
   Unlock,
   AlertCircle,
-  LogIn,
-  KeyRound,
-  CheckCircle2,
-  Sparkles
+  LogIn
 } from 'lucide-react';
 
 interface AuthLoginModalProps {
@@ -20,6 +15,7 @@ interface AuthLoginModalProps {
   onLoginSuccess: (role: UserRole, targetId?: string) => void;
   members: Member[];
   agents: Agent[];
+  adminAccounts?: AdminAccount[];
   initialRole?: UserRole;
 }
 
@@ -28,14 +24,17 @@ export const AuthLoginModal: React.FC<AuthLoginModalProps> = ({
   onLoginSuccess,
   members,
   agents,
+  adminAccounts = [],
   initialRole = 'member'
 }) => {
-  const [selectedRole, setSelectedRole] = useState<UserRole>(initialRole === 'public' ? 'member' : initialRole);
+  const [selectedRole, setSelectedRole] = useState<'member' | 'agent' | 'korwil'>(
+    initialRole === 'agent' ? 'agent' : initialRole === 'korwil' ? 'korwil' : 'member'
+  );
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
-  const handleRoleChange = (role: UserRole) => {
+  const handleRoleChange = (role: 'member' | 'agent' | 'korwil') => {
     setSelectedRole(role);
     setIdentifier('');
     setPassword('');
@@ -46,12 +45,52 @@ export const AuthLoginModal: React.FC<AuthLoginModalProps> = ({
     e.preventDefault();
     setErrorMessage('');
     const id = identifier.trim().toLowerCase();
+    const pwd = password.trim();
 
     if (!id) {
       setErrorMessage('Silakan masukkan username, email, atau ID Anda.');
       return;
     }
 
+    // 1. UNIVERSAL ADMIN LOGIN CHECK:
+    // Admin can log in from ANY tab/form as long as username/email and password match!
+    const effectiveAdmins = adminAccounts.length > 0 ? adminAccounts : [
+      {
+        id: 'admin-001',
+        name: 'Super Admin Pusat',
+        username: 'admin',
+        email: 'admin@sagitariusparcel.com',
+        password: 'admin123',
+        role: 'superadmin' as const,
+        roleLabel: 'Super Admin HQ',
+        createdAt: '2026-01-01',
+        status: 'Aktif' as const
+      }
+    ];
+
+    const matchedAdmin = effectiveAdmins.find((adm) => {
+      const isUsername = adm.username.toLowerCase() === id;
+      const isEmail = adm.email.toLowerCase() === id;
+      return isUsername || isEmail;
+    });
+
+    if (matchedAdmin) {
+      if (matchedAdmin.status === 'Non-aktif') {
+        setErrorMessage('Akun admin ini berstatus Non-aktif. Silakan hubungi Super Admin HQ.');
+        return;
+      }
+      if (matchedAdmin.password && matchedAdmin.password !== pwd) {
+        setErrorMessage('Password salah. Silakan coba lagi.');
+        return;
+      }
+
+      // Success login as Admin Pusat / Super Admin!
+      onLoginSuccess('admin', matchedAdmin.id);
+      onClose();
+      return;
+    }
+
+    // 2. MEMBER LOGIN
     if (selectedRole === 'member') {
       const found = members.find((m) => {
         const emailMatch = m.email && m.email.toLowerCase() === id;
@@ -63,7 +102,7 @@ export const AuthLoginModal: React.FC<AuthLoginModalProps> = ({
       });
 
       if (!found) {
-        setErrorMessage('Akun member tidak ditemukan. Periksa email atau username Anda.');
+        setErrorMessage('Akun member tidak ditemukan. Periksa email, username, atau nomor telepon Anda.');
         return;
       }
 
@@ -75,6 +114,7 @@ export const AuthLoginModal: React.FC<AuthLoginModalProps> = ({
       onLoginSuccess('member', found.id);
       onClose();
     } else if (selectedRole === 'agent') {
+      // 3. AGENT LOGIN
       const found = agents.find((a) => {
         const codeMatch = a.code.toLowerCase() === id;
         const phoneMatch = a.phone.replace(/[^0-9]/g, '') === id.replace(/[^0-9]/g, '');
@@ -85,29 +125,19 @@ export const AuthLoginModal: React.FC<AuthLoginModalProps> = ({
       });
 
       if (!found) {
-        setErrorMessage('Akun mitra agen tidak ditemukan. Periksa kode agen atau nomor WA.');
+        setErrorMessage('Akun mitra agen tidak ditemukan. Periksa kode agen atau nomor WhatsApp.');
         return;
       }
 
       onLoginSuccess('agent', found.id);
       onClose();
     } else if (selectedRole === 'korwil') {
-      // Korwil login
+      // 4. KORWIL LOGIN
       if (id.includes('korwil') || id.includes('priangan') || id.includes('budi') || id === 'korwil@sp.id') {
         onLoginSuccess('korwil');
         onClose();
       } else {
-        // Allow general login for demo if entered with password
         onLoginSuccess('korwil');
-        onClose();
-      }
-    } else if (selectedRole === 'admin') {
-      // Super Admin HQ login
-      if (id.includes('admin') || id === 'admin@sagitarius.com' || id === 'hq') {
-        onLoginSuccess('admin');
-        onClose();
-      } else {
-        onLoginSuccess('admin');
         onClose();
       }
     }
@@ -146,13 +176,13 @@ export const AuthLoginModal: React.FC<AuthLoginModalProps> = ({
                 Masuk ke Dashboard
               </h3>
               <p className="text-xs text-purple-200 mt-1">
-                Pilih jenis akun Anda untuk mengakses buku tabungan, laporan kemitraan agen, atau konsol admin.
+                Pilih jenis akun Anda untuk mengakses buku tabungan atau laporan kemitraan agen.
               </p>
             </div>
           </div>
 
-          {/* Role Tabs */}
-          <div className="grid grid-cols-4 gap-1.5 mt-4 p-1 bg-white/10 rounded-2xl backdrop-blur-xs border border-white/15">
+          {/* Role Tabs - Only Member, Agent, Korwil visible to public */}
+          <div className="grid grid-cols-3 gap-1.5 mt-4 p-1 bg-white/10 rounded-2xl backdrop-blur-xs border border-white/15">
             <button
               type="button"
               onClick={() => handleRoleChange('member')}
@@ -191,19 +221,6 @@ export const AuthLoginModal: React.FC<AuthLoginModalProps> = ({
               <MapPin className="w-4 h-4" />
               <span className="text-[11px]">Korwil</span>
             </button>
-
-            <button
-              type="button"
-              onClick={() => handleRoleChange('admin')}
-              className={`py-2 px-1 rounded-xl text-center text-xs font-bold transition flex flex-col items-center justify-center gap-1 ${
-                selectedRole === 'admin'
-                  ? 'bg-amber-400 text-slate-950 shadow-md font-bold'
-                  : 'text-purple-200 hover:bg-white/10'
-              }`}
-            >
-              <ShieldCheck className="w-4 h-4" />
-              <span className="text-[11px]">Admin Pusat</span>
-            </button>
           </div>
         </div>
 
@@ -222,7 +239,6 @@ export const AuthLoginModal: React.FC<AuthLoginModalProps> = ({
                 {selectedRole === 'member' && 'Email / Username / No. ID Member *'}
                 {selectedRole === 'agent' && 'Kode Agen / No. WhatsApp / Nama Toko *'}
                 {selectedRole === 'korwil' && 'Email / Username Koordinator Wilayah *'}
-                {selectedRole === 'admin' && 'Email / Username Super Admin HQ *'}
               </label>
               <input
                 type="text"
@@ -234,9 +250,7 @@ export const AuthLoginModal: React.FC<AuthLoginModalProps> = ({
                     ? 'siti@gmail.com atau sitirahma'
                     : selectedRole === 'agent'
                     ? 'ag-012 atau 081234567890'
-                    : selectedRole === 'korwil'
-                    ? 'korwil@sp.id'
-                    : 'admin@sagitarius.com'
+                    : 'korwil@sp.id'
                 }
                 className="w-full px-3 py-2.5 border border-slate-300 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-purple-600 font-medium text-xs bg-slate-50/50 text-slate-900"
               />
@@ -267,9 +281,7 @@ export const AuthLoginModal: React.FC<AuthLoginModalProps> = ({
                   ? 'Member'
                   : selectedRole === 'agent'
                   ? 'Mitra Agen'
-                  : selectedRole === 'korwil'
-                  ? 'Korwil'
-                  : 'Admin Pusat'}
+                  : 'Korwil'}
               </span>
             </button>
           </form>
@@ -310,7 +322,7 @@ export const AuthLoginModal: React.FC<AuthLoginModalProps> = ({
                     key={a.id}
                     type="button"
                     onClick={() => handleQuickLogin('agent', a.id)}
-                    className="w-full p-2.5 rounded-xl border border-slate-200 hover:border-blue-500 bg-slate-50 hover:bg-blue-50/60 flex items-center justify-between transition text-left"
+                    className="w-full p-2.5 rounded-xl border border-slate-200 hover:border-blue-500 bg-slate-50 hover:bg-blue-50/60 flex items-center justify-between transition text-left cursor-pointer"
                   >
                     <div>
                       <strong className="text-slate-900 block text-xs">{a.storeName} ({a.ownerName})</strong>
@@ -330,7 +342,7 @@ export const AuthLoginModal: React.FC<AuthLoginModalProps> = ({
               <button
                 type="button"
                 onClick={() => handleQuickLogin('korwil')}
-                className="w-full p-2.5 rounded-xl border border-slate-200 hover:border-purple-500 bg-slate-50 hover:bg-purple-50/60 flex items-center justify-between transition text-left"
+                className="w-full p-2.5 rounded-xl border border-slate-200 hover:border-purple-500 bg-slate-50 hover:bg-purple-50/60 flex items-center justify-between transition text-left cursor-pointer"
               >
                 <div>
                   <strong className="text-slate-900 block text-xs">Budi Santoso (Korwil Priangan Timur)</strong>
@@ -340,24 +352,6 @@ export const AuthLoginModal: React.FC<AuthLoginModalProps> = ({
                 </div>
                 <span className="text-[10px] font-bold text-purple-800 bg-purple-100 px-2 py-0.5 rounded-md shrink-0">
                   Masuk Korwil
-                </span>
-              </button>
-            )}
-
-            {selectedRole === 'admin' && (
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('admin')}
-                className="w-full p-2.5 rounded-xl border border-slate-200 hover:border-rose-500 bg-slate-50 hover:bg-rose-50/60 flex items-center justify-between transition text-left"
-              >
-                <div>
-                  <strong className="text-slate-900 block text-xs">Super Admin HQ Sagitarius</strong>
-                  <span className="text-[10px] text-slate-500">
-                    Akses Penuh: Approval Transaksi, Katalog Paket, Cloud DB
-                  </span>
-                </div>
-                <span className="text-[10px] font-bold text-rose-800 bg-rose-100 px-2 py-0.5 rounded-md shrink-0">
-                  Masuk Super Admin
                 </span>
               </button>
             )}

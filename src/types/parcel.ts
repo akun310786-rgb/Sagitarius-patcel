@@ -79,3 +79,16 @@ export interface KorwilRegion {
   currentAmount: number;
   targetAmount: number;
 }
+
+export interface AdminAccount {
+  id: string;
+  name: string;
+  username: string;
+  email: string;
+  password?: string;
+  role: 'superadmin' | 'admin' | 'finance' | 'staff';
+  roleLabel: string;
+  phone?: string;
+  createdAt: string;
+  status: 'Aktif' | 'Non-aktif';
+}

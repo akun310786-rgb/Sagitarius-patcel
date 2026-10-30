@@ -1,5 +1,5 @@
 import { MongoClient, Db } from 'mongodb';
-import { PACKAGES, AGENTS, INITIAL_MEMBERS, INITIAL_TRANSACTIONS } from '../data/mockData.js';
+import { PACKAGES, AGENTS, INITIAL_MEMBERS, INITIAL_TRANSACTIONS, INITIAL_ADMINS } from '../data/mockData.js';
 
 let client: MongoClient | null = null;
 let db: Db | null = null;
@@ -11,6 +11,7 @@ let memPackages = [...PACKAGES];
 let memAgents = [...AGENTS];
 let memMembers = [...INITIAL_MEMBERS];
 let memTransactions = [...INITIAL_TRANSACTIONS];
+let memAdmins = [...INITIAL_ADMINS];
 
 export async function getDb(): Promise<{ db: Db | null; isConnected: boolean; error: string | null }> {
   if (db && isConnected) {
@@ -77,6 +78,12 @@ async function autoSeed(database: Db) {
     if (txCount === 0) {
       console.log('[MongoDB Atlas] Seeding initial transactions...');
       await database.collection('transactions').insertMany(INITIAL_TRANSACTIONS.map((t: any) => ({ ...t, _id: t.id })));
+    }
+
+    const adminCount = await database.collection('admins').countDocuments();
+    if (adminCount === 0) {
+      console.log('[MongoDB Atlas] Seeding initial admins...');
+      await database.collection('admins').insertMany(INITIAL_ADMINS.map((a: any) => ({ ...a, _id: a.id })));
     }
   } catch (e) {
     console.debug('[MongoDB Atlas] Auto-seed note:', e);
@@ -248,6 +255,47 @@ export async function saveTransaction(tx: any) {
     }
   }
   return txWithId;
+}
+
+export async function getAllAdmins() {
+  const { db: database, isConnected: online } = await getDb();
+  if (online && database) {
+    try {
+      const docs = await database.collection('admins').find({}).toArray();
+      if (docs.length > 0) {
+        return docs.map(({ _id, ...rest }) => ({ id: _id ? String(_id) : (rest as any).id, ...rest }));
+      }
+    } catch (e) {
+      console.debug('[MongoDB Atlas] Error getting admins:', e);
+    }
+  }
+  return memAdmins;
+}
+
+export async function saveAdmin(admin: any) {
+  const { db: database, isConnected: online } = await getDb();
+  const id = admin.id || `admin-${Date.now()}`;
+  const adminWithId = { ...admin, id };
+
+  const existingIdx = memAdmins.findIndex((a) => a.id === id || a.username === admin.username);
+  if (existingIdx >= 0) {
+    memAdmins[existingIdx] = adminWithId;
+  } else {
+    memAdmins.push(adminWithId);
+  }
+
+  if (online && database) {
+    try {
+      await database.collection('admins').updateOne(
+        { _id: id as any },
+        { $set: { ...adminWithId, updatedAt: new Date().toISOString() } },
+        { upsert: true }
+      );
+    } catch (e) {
+      console.debug('[MongoDB Atlas] Error saving admin:', e);
+    }
+  }
+  return adminWithId;
 }
 
 export async function getDbStatus() {

@@ -374,55 +374,58 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
         )}
       </nav>
 
-      {/* Hero Section with Luxury Background */}
-      <section className="relative bg-gradient-to-b from-[#16062a] via-[#270b4a] to-[#110423] text-white pt-14 pb-20 px-4 sm:px-6 overflow-hidden">
-        {/* Luxury Background Image Layer with Royal Ambiance */}
+      {/* Hero Section with Official Luxury Banner Background */}
+      <section className="relative bg-[#090210] text-white pt-10 sm:pt-14 pb-20 px-4 sm:px-6 overflow-hidden min-h-[620px] flex items-center">
+        {/* Luxury Background Image Layer with Official Sagitarius Banner */}
         <div className="absolute inset-0 pointer-events-none select-none overflow-hidden">
           <img
-            src={heroLuxuryBg}
+            src="/assets/aistudio/banner_sagitarius_efa6519f.png"
             alt="Kemewahan Sagitarius Parcel Lebaran"
-            className="w-full h-full object-cover object-top opacity-35 mix-blend-screen scale-105 transform -translate-y-2 filter saturate-125 contrast-110"
+            className="w-full h-full object-cover object-center lg:object-right filter brightness-95 contrast-105"
           />
-          {/* Deep Royal Purple Vignettes for Optimal Readability */}
-          <div className="absolute inset-0 bg-gradient-to-r from-[#140428]/95 via-[#230942]/80 to-[#120324]/90" />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#110423] via-transparent to-[#140428]/60" />
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_30%_30%,rgba(245,158,11,0.15),transparent_65%)]" />
+          {/* Deep Dark & Royal Gold Vignettes for Flawless Text Readability on Left */}
+          <div className="absolute inset-0 bg-gradient-to-r from-black/95 via-black/80 lg:via-black/60 to-black/25" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#090210] via-transparent to-black/60" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_25%_40%,rgba(168,85,247,0.18),transparent_60%)]" />
         </div>
         <div className="absolute right-0 top-1/4 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="max-w-7xl mx-auto relative z-10">
-          <div className="max-w-3xl space-y-4">
-            <div className="inline-flex items-center space-x-2 bg-purple-900/70 border border-purple-500/40 rounded-full px-3.5 py-1 text-xs text-amber-300 font-medium backdrop-blur-xs">
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              <span>Solusi Cerdas Tabungan & Paket Idul Fitri 1448 H</span>
+        <div className="max-w-7xl mx-auto relative z-10 w-full">
+          {/* Hero Text & Action Card */}
+          <div className="max-w-3xl space-y-4 bg-gradient-to-br from-black/80 via-[#1e0738]/50 to-black/70 backdrop-blur-md p-6 sm:p-9 rounded-3xl border border-amber-400/35 shadow-2xl">
+            <div className="inline-flex items-center space-x-2 bg-amber-400/15 border border-amber-400/50 rounded-full px-4 py-1.5 text-xs text-amber-300 font-bold backdrop-blur-xs shadow-xs">
+              <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+              <span>Solusi Cerdas Tabungan & Paket Idul Fitri 1448 H / 2027</span>
             </div>
 
-            <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-white leading-tight">
-              Wujudkan Kebahagiaan di Hari yang Fitri Bersama{' '}
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white leading-tight tracking-tight drop-shadow-md">
+              Kirim Hadiah, Hadirkan Bahagia Bersama{' '}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-amber-200 to-yellow-400">
                 Sagitarius Parcel
               </span>
             </h1>
 
-            <p className="text-sm sm:text-base text-purple-100/90 leading-relaxed max-w-2xl">
-              Paket lebaran untuk keluarga, sahabat dan orang tercinta. Mudah, hemat, aman dan terpercaya dengan sistem tabungan fleksibel serta jaminan kualitas parcel premium.
+            <p className="text-sm sm:text-base text-slate-200 leading-relaxed max-w-2xl font-normal drop-shadow-xs">
+              Paket istimewa untuk setiap momen kebahagiaan Idul Fitri bersama keluarga dan orang tercinta. Nikmati kemudahan menabung harian & mingguan, jaminan mutu kue serta sembako premium, dan pengiriman serentak tepat waktu H-7.
             </p>
 
-            <div className="flex flex-wrap items-center gap-3 pt-2">
+            <div className="flex flex-wrap items-center gap-3 pt-3">
               <button
                 onClick={() => onOpenRegister()}
-                className="px-5 py-3 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black rounded-xl text-xs sm:text-sm shadow-lg hover:shadow-xl transition transform active:scale-95"
+                className="px-6 py-3.5 bg-gradient-to-r from-amber-400 via-amber-300 to-yellow-400 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black rounded-xl text-xs sm:text-sm shadow-xl shadow-amber-500/25 transition transform hover:scale-105 active:scale-95 flex items-center gap-2"
               >
-                Daftar Member Sekarang
+                <span>Daftar Member Sekarang</span>
+                <ArrowRight className="w-4 h-4 text-slate-950" />
               </button>
               <a
                 href="#katalog"
-                className="px-5 py-3 bg-purple-900/70 hover:bg-purple-800 text-white font-bold rounded-xl text-xs sm:text-sm border border-purple-500/50 transition backdrop-blur-xs"
+                className="px-5 py-3.5 bg-purple-950/80 hover:bg-purple-900 text-white font-bold rounded-xl text-xs sm:text-sm border border-amber-400/50 hover:border-amber-300 transition backdrop-blur-md shadow-md flex items-center gap-1.5"
               >
-                Pilih Paket Lebaran
+                <Package className="w-4 h-4 text-amber-300" />
+                <span>Pilih Paket Lebaran</span>
               </a>
               <a
                 href="#simulasi"
-                className="px-4 py-3 text-purple-200 hover:text-white font-medium text-xs sm:text-sm flex items-center space-x-1.5 transition"
+                className="px-4 py-3.5 text-amber-200 hover:text-white font-semibold text-xs sm:text-sm flex items-center space-x-1.5 transition bg-black/50 hover:bg-black/70 rounded-xl border border-white/15 backdrop-blur-xs shadow-xs"
               >
                 <Calculator className="w-4 h-4 text-amber-400" />
                 <span>Simulasi Tabungan</span>
@@ -431,18 +434,18 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
           </div>
 
           {/* Counters Row */}
-          <div className="grid grid-cols-3 gap-4 max-w-xl mt-10 pt-8 border-t border-purple-800/60">
-            <div>
+          <div className="grid grid-cols-3 gap-4 max-w-xl mt-8 pt-6 border-t border-purple-800/60">
+            <div className="bg-black/40 backdrop-blur-md p-3 rounded-2xl border border-purple-500/20 text-center">
               <div className="text-2xl sm:text-3xl font-black text-amber-400 font-mono">8.500+</div>
-              <div className="text-[11px] sm:text-xs text-purple-200">Member Terdaftar</div>
+              <div className="text-[11px] sm:text-xs text-purple-200 mt-0.5">Member Terdaftar</div>
             </div>
-            <div>
+            <div className="bg-black/40 backdrop-blur-md p-3 rounded-2xl border border-purple-500/20 text-center">
               <div className="text-2xl sm:text-3xl font-black text-amber-400 font-mono">240+</div>
-              <div className="text-[11px] sm:text-xs text-purple-200">Agen Binaan Aktif</div>
+              <div className="text-[11px] sm:text-xs text-purple-200 mt-0.5">Agen Binaan Aktif</div>
             </div>
-            <div>
+            <div className="bg-black/40 backdrop-blur-md p-3 rounded-2xl border border-purple-500/20 text-center">
               <div className="text-2xl sm:text-3xl font-black text-emerald-400 font-mono">100%</div>
-              <div className="text-[11px] sm:text-xs text-purple-200">Tepat Waktu H-7</div>
+              <div className="text-[11px] sm:text-xs text-purple-200 mt-0.5">Tepat Waktu H-7</div>
             </div>
           </div>
 

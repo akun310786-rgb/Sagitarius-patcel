@@ -155,11 +155,6 @@ export const AuthLoginModal: React.FC<AuthLoginModalProps> = ({
     }
   };
 
-  const handleQuickLogin = (role: UserRole, targetId?: string) => {
-    onLoginSuccess(role, targetId);
-    onClose();
-  };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-xs p-3 sm:p-5 overflow-y-auto animate-in fade-in duration-150">
       <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200">
@@ -280,11 +275,6 @@ export const AuthLoginModal: React.FC<AuthLoginModalProps> = ({
                 placeholder="Masukkan kata sandi akun Anda"
                 className="w-full px-3 py-2.5 border border-slate-300 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-purple-600 font-medium text-xs bg-slate-50/50 text-slate-900"
               />
-              <p className="mt-1 text-[10px] text-slate-500">
-                {selectedRole === 'member' && 'Password akun demo member: password123.'}
-                {selectedRole === 'agent' && 'Password akun demo agen: password123.'}
-                {selectedRole === 'korwil' && `Akun demo: ${DEMO_KORWIL_USERNAME} · password123.`}
-              </p>
             </div>
 
             <button
@@ -303,76 +293,6 @@ export const AuthLoginModal: React.FC<AuthLoginModalProps> = ({
             </button>
           </form>
 
-          {/* Quick Demo Access (1-Klik) */}
-          <div className="pt-3 border-t border-slate-100">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2 text-center">
-              Akses Cepat Pengujian Demo (1-Klik Masuk):
-            </span>
-
-            {selectedRole === 'member' && (
-              <div className="space-y-1.5">
-                {members.slice(0, 3).map((m) => (
-                  <button
-                    key={m.id}
-                    type="button"
-                    onClick={() => handleQuickLogin('member', m.id)}
-                    className="w-full p-2.5 rounded-xl border border-slate-200 hover:border-purple-500 bg-slate-50 hover:bg-purple-50/60 flex items-center justify-between transition text-left cursor-pointer"
-                  >
-                    <div>
-                      <strong className="text-slate-900 block text-xs">{m.name}</strong>
-                      <span className="text-[10px] text-slate-500 font-mono">
-                        {m.email || `${m.memberCode.toLowerCase()}@member.sp`} · {m.packageName}
-                      </span>
-                    </div>
-                    <span className="text-[10px] font-bold text-purple-800 bg-purple-100 px-2 py-0.5 rounded-md shrink-0">
-                      Masuk Langsung
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {selectedRole === 'agent' && (
-              <div className="space-y-1.5">
-                {agents.slice(0, 3).map((a) => (
-                  <button
-                    key={a.id}
-                    type="button"
-                    onClick={() => handleQuickLogin('agent', a.id)}
-                    className="w-full p-2.5 rounded-xl border border-slate-200 hover:border-blue-500 bg-slate-50 hover:bg-blue-50/60 flex items-center justify-between transition text-left cursor-pointer"
-                  >
-                    <div>
-                      <strong className="text-slate-900 block text-xs">{a.storeName} ({a.ownerName})</strong>
-                      <span className="text-[10px] text-slate-500 font-mono">
-                        Kode: {a.code} · {a.regency}
-                      </span>
-                    </div>
-                    <span className="text-[10px] font-bold text-blue-800 bg-blue-100 px-2 py-0.5 rounded-md shrink-0">
-                      Masuk Agen
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {selectedRole === 'korwil' && (
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('korwil')}
-                className="w-full p-2.5 rounded-xl border border-slate-200 hover:border-purple-500 bg-slate-50 hover:bg-purple-50/60 flex items-center justify-between transition text-left cursor-pointer"
-              >
-                <div>
-                  <strong className="text-slate-900 block text-xs">Budi Santoso (Korwil Priangan Timur)</strong>
-                  <span className="text-[10px] text-slate-500">
-                    Membawahi Ciamis, Tasikmalaya, Banjar, Pangandaran
-                  </span>
-                </div>
-                <span className="text-[10px] font-bold text-purple-800 bg-purple-100 px-2 py-0.5 rounded-md shrink-0">
-                  Masuk Korwil
-                </span>
-              </button>
-            )}
-          </div>
         </div>
       </div>
     </div>

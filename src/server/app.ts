@@ -1,6 +1,5 @@
 import express, { Request, Response, NextFunction } from 'express';
 import { createHash, randomUUID } from 'node:crypto';
-import { GoogleGenAI } from '@google/genai';
 import {
   getDbStatus,
   getAllPackages,
@@ -60,7 +59,7 @@ const signedIn = requireAuth;
 
 app.post('/api/chat', async (req: Request, res: Response) => {
   try {
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) { res.status(503).json({ error: 'Asisten AI belum dikonfigurasi. Silakan hubungi tim kami.' }); return; }
 
 
@@ -111,13 +110,40 @@ app.post('/api/chat', async (req: Request, res: Response) => {
       `Informasi umum: PT. SAGITARIUS TRINUNGGAL KARYA; program tabungan parcel Idul Fitri; alamat Bantar Peundeuy RT. 006 RW. 001 Margajaya Mangunreja, Kab. Tasikmalaya, Jawa Barat 46462; hotline resmi 0813-2438-3479.`,
       `Katalog publik saat ini: ${JSON.stringify(publicCatalog)}`
     ].join('\n');
-    const client = new GoogleGenAI({ apiKey });
-    const response = await client.models.generateContent({
-      model: process.env.GEMINI_MODEL?.trim() || 'gemini-3.8-flash',
-      contents: messages.map(({ role, text }) => ({ role, parts: [{ text }] })),
-      config: { systemInstruction, maxOutputTokens: 400, temperature: 0.35 }
+    const response = await fetch('https://api.openai.com/v1/responses', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: process.env.OPENAI_MODEL?.trim() || 'gpt-4o-mini',
+        instructions: systemInstruction,
+        input: messages.map(({ role, text }) => ({
+          role: role === 'model' ? 'assistant' : 'user',
+          content: text
+        })),
+        max_output_tokens: 400,
+        temperature: 0.35,
+        store: false
+      }),
+      signal: AbortSignal.timeout(25_000)
     });
-    const reply = response.text?.trim();
+    if (!response.ok) {
+      const errorBody = await response.text();
+      console.error('[AI Chat] OpenAI API menolak permintaan:', response.status, errorBody.slice(0, 1000));
+      res.status(502).json({ error: 'Asisten sedang mengalami gangguan. Silakan coba lagi atau hubungi tim kami.' });
+      return;
+    }
+    const responseBody = await response.json() as {
+      output?: Array<{ content?: Array<{ type?: string; text?: string }> }>;
+    };
+    const reply = responseBody.output
+      ?.flatMap((item) => item.content || [])
+      .filter((item) => item.type === 'output_text')
+      .map((item) => item.text || '')
+      .join('\n')
+      .trim();
     if (!reply) { res.status(502).json({ error: 'Asisten belum mendapatkan jawaban. Silakan coba lagi.' }); return; }
     res.json({ reply: reply.slice(0, 2500) });
   } catch (error) {

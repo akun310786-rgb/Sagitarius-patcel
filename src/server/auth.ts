@@ -14,6 +14,8 @@ export interface AuthPrincipal {
   role: AccountRole;
   name: string;
   agentId?: string;
+  korwilRegency?: string;
+  adminRole?: 'superadmin' | 'admin' | 'finance' | 'staff';
 }
 
 const COOKIE_NAME = 'sp_session';
@@ -126,7 +128,8 @@ export async function initializeAuth(): Promise<void> {
                 name: String(legacy.name || legacy.username || 'Pengguna'),
                 identifiers,
                 password,
-                status: legacy.status === 'Non-aktif' ? 'Non-aktif' : 'Aktif'
+                status: legacy.status === 'Non-aktif' ? 'Non-aktif' : 'Aktif',
+                ...(role === 'admin' && ['superadmin', 'admin', 'finance', 'staff'].includes(String(legacy.role)) ? { adminRole: legacy.role as 'superadmin' | 'admin' | 'finance' | 'staff' } : {})
               });
               migrated = true;
             } catch (error) {
@@ -149,7 +152,7 @@ export async function initializeAuth(): Promise<void> {
       const id = 'admin-001';
       const email = process.env.AUTH_BOOTSTRAP_ADMIN_EMAIL?.trim() || `${adminUsername}@sagitariusparcel.local`;
       try {
-        await createAuthAccount({ id, role: 'admin', name: 'Super Admin Pusat', identifiers: [adminUsername, email], password: adminPassword });
+        await createAuthAccount({ id, role: 'admin', adminRole: 'superadmin', name: 'Super Admin Pusat', identifiers: [adminUsername, email], password: adminPassword });
         await db.collection('admins').updateOne(
           { _id: id },
           { $set: { id, name: 'Super Admin Pusat', username: adminUsername, email, role: 'superadmin', roleLabel: 'Super Admin HQ', status: 'Aktif' }, $setOnInsert: { createdAt: new Date().toISOString().slice(0, 10) } },
@@ -164,8 +167,11 @@ export async function initializeAuth(): Promise<void> {
       const id = 'bootstrap-korwil';
       const exists = await db.collection('auth_users').findOne({ _id: `korwil:${id}` });
       if (!exists) {
-        try { await createAuthAccount({ id, role: 'korwil', name: 'Koordinator Wilayah', identifiers: [korwilUsername], password: korwilPassword }); }
+        try { await createAuthAccount({ id, role: 'korwil', name: 'Koordinator Wilayah', identifiers: [korwilUsername], password: korwilPassword, korwilRegency: process.env.AUTH_KORWIL_REGENCY?.trim() }); }
         catch (error) { if ((error as any)?.code !== 11000) throw error; }
+      } else {
+        const regency = process.env.AUTH_KORWIL_REGENCY?.trim();
+        await db.collection('auth_users').updateOne({ _id: `korwil:${id}` }, regency ? { $set: { korwilRegency: regency } } : { $unset: { korwilRegency: '' } });
       }
     }
   })().catch((error) => {
@@ -183,6 +189,8 @@ export async function createAuthAccount(input: {
   password: string;
   status?: string;
   agentId?: string;
+  korwilRegency?: string;
+  adminRole?: 'superadmin' | 'admin' | 'finance' | 'staff';
 }): Promise<void> {
   const { db, isConnected } = await getDb();
   if (!db || !isConnected) throw new Error('Database tidak tersedia');
@@ -203,9 +211,12 @@ export async function createAuthAccount(input: {
         passwordHash,
         status: input.status || 'Aktif',
         ...(input.agentId ? { agentId: input.agentId } : {}),
+        ...(input.korwilRegency ? { korwilRegency: input.korwilRegency } : {}),
+        ...(input.adminRole ? { adminRole: input.adminRole } : {}),
         updatedAt: new Date()
       },
-      $setOnInsert: { createdAt: new Date() }
+      $setOnInsert: { createdAt: new Date() },
+      ...(input.role === 'korwil' && !input.korwilRegency ? { $unset: { korwilRegency: '' } } : {})
     },
     { upsert: true }
   );
@@ -232,6 +243,8 @@ export async function verifyCredentials(
     id: String(account.userId),
     role,
     name: String(account.name || 'Pengguna'),
+    ...(role === 'korwil' && account.korwilRegency ? { korwilRegency: String(account.korwilRegency) } : {}),
+    ...(role === 'admin' ? { adminRole: account.adminRole || 'staff' } : {}),
     ...(account.agentId ? { agentId: String(account.agentId) } : {})
   };
 }

@@ -114,24 +114,9 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
       item.no.toString().includes(barangSearch)
   );
 
-  const simPkg = packages.find((p) => p.id === simSelectedPackageId) || packages[0] || {
-    id: 'pkg-default',
-    name: 'Paket Bunda — Reguler',
-    category: 'bunda' as const,
-    tag: 'REGULER 2.000/HARI',
-    description: '',
-    targetPrice: 650000,
-    dailyPayment: 2000,
-    weeklyPayment: 14000,
-    durationDays: 325,
-    thrBonus: 'THR Rp 200.000',
-    bonusGift: 'Travel Bag Eksklusif SP',
-    weight: '± 7.5 kg',
-    imageUrl: '',
-    items: []
-  };
-  const weeklyInstallment = Math.round(simPkg.targetPrice / simulationWeeks);
-  const dailyInstallment = Math.round(simPkg.targetPrice / (simulationWeeks * 7));
+  const simPkg = packages.find((p) => p.id === simSelectedPackageId) || packages[0];
+  const weeklyInstallment = simPkg ? Math.round(simPkg.targetPrice / simulationWeeks) : 0;
+  const dailyInstallment = simPkg ? Math.round(simPkg.targetPrice / (simulationWeeks * 7)) : 0;
 
   return (
     <div className="bg-[#fbf9fd] text-slate-900 min-h-screen">
@@ -141,7 +126,7 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
           <div className="flex items-center space-x-2">
             <span className="inline-block w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
             <span className="font-semibold text-purple-100">
-              Pendaftaran Paket Lebaran 1448 H / 2027 Resmi Dibuka!
+              Program Paket Lebaran 1448 H / 2027
             </span>
           </div>
           <div className="flex flex-wrap items-center gap-4 text-[11px] text-purple-300">
@@ -154,7 +139,7 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
             </button>
             <span className="flex items-center space-x-1">
               <PhoneCall className="w-3.5 h-3.5 text-purple-400" />
-              <span>Hotline CS: 0822-1234-5678</span>
+              <span>Hotline CS: {COMPANY_INFO.phone}</span>
             </span>
             <span className="hidden sm:flex items-center space-x-1">
               <MapPin className="w-3.5 h-3.5 text-purple-400" />
@@ -494,7 +479,7 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
             <div>
               <h4 className="font-bold text-sm text-slate-900">Setoran Fleksibel</h4>
               <p className="text-xs text-slate-500 mt-1 leading-normal">
-                Mulai dari Rp 12.000 / minggu. Bisa ditabung harian, mingguan, atau bulanan sesuai kemampuan.
+                Pilih paket yang tersedia dan ikuti jadwal setoran yang tercantum pada detail paket.
               </p>
             </div>
           </div>
@@ -504,9 +489,9 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
               <ShieldCheck className="w-6 h-6" />
             </div>
             <div>
-              <h4 className="font-bold text-sm text-slate-900">Aman & Terpercaya</h4>
+              <h4 className="font-bold text-sm text-slate-900">Catatan Setoran</h4>
               <p className="text-xs text-slate-500 mt-1 leading-normal">
-                Tercatat resmi dalam buku tabungan digital dengan notifikasi pusat real-time & kuitansi sah.
+                Setoran yang dikirim akan tercatat sebagai menunggu sampai diverifikasi petugas. Simpan bukti transaksi Anda.
               </p>
             </div>
           </div>
@@ -516,9 +501,9 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
               <Truck className="w-6 h-6" />
             </div>
             <div>
-              <h4 className="font-bold text-sm text-slate-900">Jangkauan Nasional</h4>
+              <h4 className="font-bold text-sm text-slate-900">Bantuan Wilayah</h4>
               <p className="text-xs text-slate-500 mt-1 leading-normal">
-                Didukung ratusan agen dan korwil lokal yang siap mendistribusikan langsung serentak H-7.
+                Hubungi hotline resmi untuk memastikan ketersediaan agen dan jadwal layanan di wilayah Anda.
               </p>
             </div>
           </div>
@@ -682,7 +667,7 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
                     </span>
                   </h4>
                   <span className="text-xs text-amber-300 font-mono">
-                    *Tepat Sesuai Flyer Sagitarius
+                    *Pastikan ketentuan terbaru melalui hotline resmi
                   </span>
                 </div>
 
@@ -766,14 +751,11 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
 
                 <div className="mt-6 pt-4 border-t border-purple-800/60 flex flex-wrap items-center justify-between gap-4">
                   <div className="text-xs text-purple-200 max-w-xl">
-                    💡 <em>Paket Uang bisa dicairkan tepat waktu melalui transfer rekening langsung ke member atau tunai via Agen Binaan.</em>
+                    💡 <em>Skema Paket Uang perlu dikonfirmasi dengan tim; informasi pencairan dan metode pembayaran mengikuti ketentuan yang disepakati.</em>
                   </div>
-                  <button
-                    onClick={() => onOpenRegister('pkg-bunda-reguler')}
-                    className="px-5 py-2.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-bold rounded-xl text-xs shadow-md transition"
-                  >
-                    Daftar Paket Uang Sekarang
-                  </button>
+                  <a href={`https://wa.me/62${COMPANY_INFO.phone.replace(/^0/, '').replace(/\D/g, '')}`} target="_blank" rel="noreferrer" className="px-5 py-2.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-bold rounded-xl text-xs shadow-md transition">
+                    Konfirmasi & Tanya Tim
+                  </a>
                 </div>
               </div>
             </div>
@@ -1316,55 +1298,26 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
         )}
       </section>
 
-      {/* Door Prize Program Banner from Flyer */}
+      {/* Confirm current campaign details with the official team before publishing prize terms. */}
       <section id="doorprize" className="max-w-7xl mx-auto px-4 sm:px-6 mb-16">
         <div className="bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 rounded-3xl p-6 sm:p-10 shadow-2xl border-4 border-amber-300 relative overflow-hidden">
           <div className="relative z-10 max-w-4xl space-y-4">
             <div className="inline-flex items-center space-x-2 bg-slate-950 text-amber-300 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider">
               <Trophy className="w-4 h-4 text-amber-400" />
-              <span>PROGRAM RESMI DOOR PRIZE SAGITARIUS PARCEL 2026 - 2027</span>
+              <span>INFORMASI PROGRAM HADIAH</span>
             </div>
 
             <h3 className="text-2xl sm:text-4xl font-black text-slate-950 leading-tight">
-              Raih Hadiah Utama 1 Unit Sepeda Motor & Elektronik Rumah Tangga!
+              Tanyakan program hadiah yang sedang berlaku
             </h3>
 
             <p className="text-xs sm:text-sm font-semibold text-slate-900 leading-relaxed max-w-2xl">
-              Setiap Member berhak mendapatkan <strong>Kupon Door Prize</strong> apabila pembayaran tabungan lancar memenuhi syarat rules pembayaran. Pengundian dilakukan secara <strong>LIVE</strong> di akun sosial media resmi Sagitarius Parcel!
+              Syarat, hadiah, dan jadwal program dapat berubah. Hubungi hotline resmi Sagitarius Parcel untuk memperoleh informasi dan ketentuan terbaru sebelum mendaftar.
             </p>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 pt-2">
-              <div className="bg-white/90 backdrop-blur-xs p-3 rounded-2xl text-center shadow-sm border border-amber-300">
-                <div className="text-xl">🛵</div>
-                <div className="font-black text-slate-900 text-xs mt-1">Motor Beat</div>
-                <span className="text-[10px] text-amber-800 font-bold">Grand Prize</span>
-              </div>
-              <div className="bg-white/90 backdrop-blur-xs p-3 rounded-2xl text-center shadow-sm border border-amber-300">
-                <div className="text-xl">❄️</div>
-                <div className="font-black text-slate-900 text-xs mt-1">Kulkas 2 Pintu</div>
-                <span className="text-[10px] text-emerald-800 font-semibold">Elektronik</span>
-              </div>
-              <div className="bg-white/90 backdrop-blur-xs p-3 rounded-2xl text-center shadow-sm border border-amber-300">
-                <div className="text-xl">📱</div>
-                <div className="font-black text-slate-900 text-xs mt-1">HP Android</div>
-                <span className="text-[10px] text-emerald-800 font-semibold">Smartphone</span>
-              </div>
-              <div className="bg-white/90 backdrop-blur-xs p-3 rounded-2xl text-center shadow-sm border border-amber-300">
-                <div className="text-xl">🔥</div>
-                <div className="font-black text-slate-900 text-xs mt-1">Kompor Gas Kaca</div>
-                <span className="text-[10px] text-emerald-800 font-semibold">Dapur Modern</span>
-              </div>
-              <div className="bg-white/90 backdrop-blur-xs p-3 rounded-2xl text-center shadow-sm border border-amber-300">
-                <div className="text-xl">🍚</div>
-                <div className="font-black text-slate-900 text-xs mt-1">Magic Com Digital</div>
-                <span className="text-[10px] text-emerald-800 font-semibold">Rice Cooker</span>
-              </div>
-              <div className="bg-white/90 backdrop-blur-xs p-3 rounded-2xl text-center shadow-sm border border-amber-300">
-                <div className="text-xl">🍲</div>
-                <div className="font-black text-slate-900 text-xs mt-1">Panci Presto</div>
-                <span className="text-[10px] text-emerald-800 font-semibold">Stainless Steel</span>
-              </div>
-            </div>
+            <a href={`https://wa.me/62${COMPANY_INFO.phone.replace(/^0/, '').replace(/\D/g, '')}`} target="_blank" rel="noreferrer" className="inline-flex rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-amber-300 hover:bg-slate-800">
+              Tanyakan melalui WhatsApp resmi
+            </a>
           </div>
         </div>
       </section>
@@ -1450,13 +1403,14 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
               </div>
 
               <div className="text-xs text-purple-100 space-y-1">
-                <div>Paket: <strong>{simPkg.name}</strong></div>
-                <div>Target Pelunasan: <strong>Rp {simPkg.targetPrice.toLocaleString('id-ID')}</strong></div>
+                <div>Paket: <strong>{simPkg?.name || 'Katalog sedang dimuat'}</strong></div>
+                {simPkg && <div>Target Pelunasan: <strong>Rp {simPkg.targetPrice.toLocaleString('id-ID')}</strong></div>}
               </div>
 
               <button
-                onClick={() => onOpenRegister(simPkg.id)}
-                className="w-full py-3 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-bold rounded-xl text-xs shadow-md transition"
+                onClick={() => simPkg && onOpenRegister(simPkg.id)}
+                disabled={!simPkg}
+                className="w-full py-3 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 disabled:opacity-50 disabled:cursor-not-allowed text-slate-950 font-bold rounded-xl text-xs shadow-md transition"
               >
                 Kunci Simulasi Ini & Daftar
               </button>
@@ -1640,19 +1594,19 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
             {[
               {
                 q: 'Apakah setoran tabungan parcel ini aman?',
-                a: 'Sangat aman. Setiap setoran tercatat otomatis dalam buku tabungan digital member dengan notifikasi SMS/WhatsApp langsung dari sistem pusat Sagitarius Parcel.'
+                a: 'Setoran yang dikirim tercatat dengan status menunggu. Saldo baru diperbarui setelah petugas memverifikasi transaksi. Saat ini sistem belum mengirim notifikasi SMS atau WhatsApp otomatis.'
               },
               {
                 q: 'Bagaimana jika saya berhalangan menyetor di minggu tertentu?',
-                a: 'Sistem tabungan kami fleksibel! Anda dapat merapel atau mencicil lebih di minggu berikutnya sebelum tanggal jatuh tempo pelunasan (H-14 Idul Fitri).'
+                a: 'Jadwal dan batas pelunasan mengikuti ketentuan paket yang Anda pilih. Silakan hubungi hotline resmi jika perlu mengubah jadwal setoran.'
               },
               {
                 q: 'Bagaimana cara mengambil paket lebaran saya?',
-                a: 'Setelah paket lunas, Anda akan menerima Kode QR Pengambilan. Cukup tunjukkan kode QR tersebut ke Agen Binaan Anda untuk serah terima paket.'
+                a: 'Informasi pengambilan dan kode yang diperlukan akan tersedia setelah paket lunas dan proses distribusi dikonfirmasi oleh petugas.'
               },
               {
                 q: 'Apakah isi kue kering dijamin baru dan tidak kadaluarsa?',
-                a: 'Semua kue kering diproduksi secara fresh pada H-30 hingga H-15 Lebaran oleh mitra produsen bersertifikat Halal dan P-IRT terdaftar dengan jaminan toples tersegel kedap udara.'
+                a: 'Komposisi, tanggal kedaluwarsa, serta informasi sertifikasi mengikuti label produk dari produsen. Mohon konfirmasi ketersediaan produk kepada tim sebelum melakukan pemesanan.'
               }
             ].map((faq, idx) => (
               <div
@@ -1722,7 +1676,7 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
               <li>Pembayaran selama 325 hari (45 minggu)</li>
               <li>Paket Uang dibagikan Lebih Awal</li>
               <li>Daging & Telur dibagikan H-2 Idul Fitri</li>
-              <li>Door Prize diundi LIVE di Media Sosial Resmi</li>
+              <li>Hubungi hotline untuk ketentuan program hadiah terbaru</li>
               <li onClick={onOpenGuide} className="text-amber-400 font-semibold cursor-pointer hover:underline">
                 Panduan Operasional Sistem & Korwil
               </li>

@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
-import { AGENTS, KORWIL_REGIONS } from '../data/mockData';
-import { Transaction, Agent } from '../types/parcel';
+import React from 'react';
+import { Transaction, Agent, Member } from '../types/parcel';
 import {
   MapPin,
   Store,
@@ -9,15 +8,15 @@ import {
   BadgeDollarSign,
   Download,
   CheckCircle2,
-  AlertCircle,
   FileCheck2,
-  TrendingUp,
-  Check,
   LogOut
 } from 'lucide-react';
 
 interface KorwilDashboardProps {
   pendingTransactions: Transaction[];
+  transactions: Transaction[];
+  members: Member[];
+  name: string;
   onVerifyKorwil: (txId: string) => void;
   agents?: Agent[];
   onOpenAgentRegister?: () => void;
@@ -26,35 +25,40 @@ interface KorwilDashboardProps {
 
 export const KorwilDashboard: React.FC<KorwilDashboardProps> = ({
   pendingTransactions,
+  transactions,
+  members,
+  name,
   onVerifyKorwil,
-  agents = AGENTS,
+  agents = [],
   onOpenAgentRegister,
   onLogout
 }) => {
-  const allAgents = agents && agents.length > 0 ? agents : AGENTS;
-  const [verifiedList, setVerifiedList] = useState<string[]>([]);
-
+  const allAgents = agents;
   const handleVerify = (txId: string) => {
-    setVerifiedList((prev) => [...prev, txId]);
     onVerifyKorwil(txId);
   };
 
   const handleExport = () => {
     const csvContent =
-      'data:text/csv;charset=utf-8,Wilayah,Target,Terkumpul,Persentase\n' +
-      KORWIL_REGIONS.map(
-        (r) => `${r.name},${r.targetAmount},${r.currentAmount},${Math.round((r.currentAmount / r.targetAmount) * 100)}%`
-      ).join('\n');
+      'data:text/csv;charset=utf-8,Agen,Member,Setoran berhasil\n' +
+      allAgents.map((agent) => {
+        const memberCount = members.filter((member) => member.agentId === agent.id).length;
+        const total = transactions.filter((tx) => tx.agentId === agent.id && tx.status === 'Berhasil').reduce((sum, tx) => sum + tx.amount, 0);
+        return `${agent.storeName},${memberCount},${total}`;
+      }).join('\n');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', 'laporan_wilayah_priangan_timur_2026.csv');
+    link.setAttribute('download', 'laporan-wilayah.csv');
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  const pendingList = pendingTransactions.filter((tx) => !verifiedList.includes(tx.id));
+  const pendingList = pendingTransactions;
+  const verifiedTransactions = transactions.filter((tx) => tx.status === 'Berhasil');
+  const verifiedTotal = verifiedTransactions.reduce((sum, tx) => sum + tx.amount, 0);
+  const memberCount = members.length;
 
   return (
     <div className="bg-[#f8fafc] min-h-screen pb-16">
@@ -67,15 +71,13 @@ export const KorwilDashboard: React.FC<KorwilDashboardProps> = ({
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <h1 className="text-xl font-bold text-slate-900">Halo, Budi Santoso</h1>
+                <h1 className="text-xl font-bold text-slate-900">Halo, {name}</h1>
                 <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2.5 py-0.5 rounded-full">
                   Korwil Aktif
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
-                Koordinator Wilayah ·{' '}
-                <strong className="text-slate-700">Jawa Barat (Priangan Timur)</strong> · Kode:{' '}
-                <span className="font-mono">KW-01</span>
+                Koordinator Wilayah · Data sesuai cakupan akun Anda
               </p>
             </div>
           </div>
@@ -111,7 +113,7 @@ export const KorwilDashboard: React.FC<KorwilDashboardProps> = ({
               </div>
             </div>
             <div className="text-3xl font-black text-slate-900">{allAgents.length}</div>
-            <div className="text-xs text-slate-400 mt-1">Tersebar di 5 Kab/Kota Jabar</div>
+            <div className="text-xs text-slate-400 mt-1">Agen yang tersedia pada akun</div>
           </div>
 
           <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
@@ -121,68 +123,55 @@ export const KorwilDashboard: React.FC<KorwilDashboardProps> = ({
                 <Users className="w-4 h-4" />
               </div>
             </div>
-            <div className="text-3xl font-black text-slate-900">540</div>
-            <div className="text-xs text-slate-400 mt-1">Total peserta aktif tahun 2026/2027</div>
+            <div className="text-3xl font-black text-slate-900">{memberCount}</div>
+            <div className="text-xs text-slate-400 mt-1">Member pada data akun</div>
           </div>
 
           <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
             <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
-              <span>Target Realisasi Wilayah</span>
+              <span>Setoran Menunggu</span>
               <div className="p-2 bg-amber-50 text-amber-600 rounded-lg">
                 <Target className="w-4 h-4" />
               </div>
             </div>
-            <div className="text-2xl font-black text-slate-900">Rp 210.000.000</div>
-            <div className="text-xs text-slate-400 mt-1">Target akumulasi wilayah</div>
+            <div className="text-2xl font-black text-slate-900">{pendingList.length}</div>
+            <div className="text-xs text-slate-400 mt-1">Transaksi menunggu verifikasi</div>
           </div>
 
           <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
             <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
-              <span>Dana Terkumpul Wilayah</span>
+              <span>Setoran Berhasil</span>
               <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
                 <BadgeDollarSign className="w-4 h-4" />
               </div>
             </div>
-            <div className="text-2xl font-black text-emerald-700">Rp 160.000.000</div>
-            <div className="text-xs text-emerald-600 font-medium mt-1">
-              76.1% tercapai per Oktober 2026
-            </div>
+            <div className="text-2xl font-black text-emerald-700">Rp {verifiedTotal.toLocaleString('id-ID')}</div>
+            <div className="text-xs text-emerald-600 font-medium mt-1">Total transaksi berhasil</div>
           </div>
         </div>
 
         {/* Regional Performance Progress Meters */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
           <div>
-            <h3 className="text-sm font-bold text-slate-900">Performa Wilayah Priangan Timur</h3>
+            <h3 className="text-sm font-bold text-slate-900">Ringkasan Wilayah</h3>
             <p className="text-xs text-slate-500">
-              Pencapaian setoran tabungan berdasarkan kabupaten & kota
+              Ringkasan realisasi berdasarkan transaksi yang berhasil diverifikasi
             </p>
           </div>
 
           <div className="space-y-4 pt-2">
-            {KORWIL_REGIONS.map((reg) => {
-              const pct = Math.round((reg.currentAmount / reg.targetAmount) * 100);
+            {allAgents.map((agent) => {
+              const total = transactions.filter((tx) => tx.agentId === agent.id && tx.status === 'Berhasil').reduce((sum, tx) => sum + tx.amount, 0);
               return (
-                <div key={reg.id} className="space-y-1.5 text-xs">
+                <div key={agent.id} className="space-y-1.5 text-xs">
                   <div className="flex justify-between font-semibold">
-                    <span className="text-slate-800">{reg.name}</span>
-                    <span className="text-slate-600">
-                      <strong className="text-emerald-700">
-                        Rp {reg.currentAmount.toLocaleString('id-ID')}
-                      </strong>{' '}
-                      / Rp {reg.targetAmount.toLocaleString('id-ID')} ({pct}%)
-                    </span>
-                  </div>
-
-                  <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden border border-slate-200 p-0.5">
-                    <div
-                      className="bg-gradient-to-r from-emerald-500 to-teal-600 h-full rounded-full transition-all duration-700"
-                      style={{ width: `${pct}%` }}
-                    />
+                    <span className="text-slate-800">{agent.storeName} · {agent.regency}</span>
+                    <strong className="text-emerald-700">Rp {total.toLocaleString('id-ID')}</strong>
                   </div>
                 </div>
               );
             })}
+            {!allAgents.length && <p className="text-xs text-slate-500">Belum ada agen dalam data akun.</p>}
           </div>
         </div>
 
@@ -237,10 +226,10 @@ export const KorwilDashboard: React.FC<KorwilDashboardProps> = ({
                       </div>
                     </td>
                     <td className="py-3 px-3 text-center font-bold text-slate-700">
-                      {agent.memberCount}
+                      {members.filter((member) => member.agentId === agent.id).length}
                     </td>
                     <td className="py-3 px-3 text-right font-bold text-emerald-800">
-                      Rp {agent.totalOmset.toLocaleString('id-ID')}
+                      Rp {transactions.filter((tx) => tx.agentId === agent.id && tx.status === 'Berhasil').reduce((sum, tx) => sum + tx.amount, 0).toLocaleString('id-ID')}
                     </td>
                     <td className="py-3 px-3 text-center">
                       <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">

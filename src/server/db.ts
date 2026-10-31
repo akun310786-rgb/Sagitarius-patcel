@@ -13,6 +13,8 @@ let memMembers = [...INITIAL_MEMBERS];
 let memTransactions = [...INITIAL_TRANSACTIONS];
 let memAdmins = [...INITIAL_ADMINS];
 
+const allowMemoryFallback = () => process.env.NODE_ENV !== 'production' && !process.env.VERCEL;
+
 export async function getDb(): Promise<{ db: Db | null; isConnected: boolean; error: string | null }> {
   if (db && isConnected) {
     return { db, isConnected: true, error: null };
@@ -55,6 +57,8 @@ export async function getDb(): Promise<{ db: Db | null; isConnected: boolean; er
 }
 
 async function autoSeed(database: Db) {
+  // Mock records are useful during local development, but never create demo financial data in production.
+  if (!allowMemoryFallback()) return;
   try {
     const pkgCount = await database.collection('packages').countDocuments();
     if (pkgCount === 0) {
@@ -97,18 +101,18 @@ export async function getAllPackages() {
   if (online && database) {
     try {
       const docs = await database.collection('packages').find({}).toArray();
-      if (docs.length > 0) {
-        return docs.map(({ _id, ...rest }) => ({ id: _id ? String(_id) : (rest as any).id, ...rest }));
-      }
+      return docs.map(({ _id, ...rest }) => ({ id: _id ? String(_id) : (rest as any).id, ...rest }));
     } catch (e) {
       console.debug('[MongoDB Atlas] Error getting packages:', e);
+      return allowMemoryFallback() ? memPackages : [];
     }
   }
-  return memPackages;
+  return allowMemoryFallback() ? memPackages : [];
 }
 
 export async function savePackage(pkg: any) {
   const { db: database, isConnected: online } = await getDb();
+  if ((!online || !database) && !allowMemoryFallback()) throw new Error('Database tidak tersedia');
   const id = pkg.id || `pkg-${Date.now()}`;
   const pkgWithId = { ...pkg, id };
 
@@ -129,6 +133,7 @@ export async function savePackage(pkg: any) {
       );
     } catch (e) {
       console.debug('[MongoDB Atlas] Error saving package:', e);
+      throw e;
     }
   }
   return pkgWithId;
@@ -139,18 +144,18 @@ export async function getAllMembers() {
   if (online && database) {
     try {
       const docs = await database.collection('members').find({}).toArray();
-      if (docs.length > 0) {
-        return docs.map(({ _id, ...rest }) => ({ id: _id ? String(_id) : (rest as any).id, ...rest }));
-      }
+      return docs.map(({ _id, ...rest }) => ({ id: _id ? String(_id) : (rest as any).id, ...rest }));
     } catch (e) {
       console.debug('[MongoDB Atlas] Error getting members:', e);
+      return allowMemoryFallback() ? memMembers : [];
     }
   }
-  return memMembers;
+  return allowMemoryFallback() ? memMembers : [];
 }
 
 export async function saveMember(member: any) {
   const { db: database, isConnected: online } = await getDb();
+  if ((!online || !database) && !allowMemoryFallback()) throw new Error('Database tidak tersedia');
   const id = member.id || `MBR-${Math.floor(100000 + Math.random() * 900000)}`;
   const memberWithId = { ...member, id };
 
@@ -170,6 +175,7 @@ export async function saveMember(member: any) {
       );
     } catch (e) {
       console.debug('[MongoDB Atlas] Error saving member:', e);
+      throw e;
     }
   }
   return memberWithId;
@@ -180,18 +186,18 @@ export async function getAllAgents() {
   if (online && database) {
     try {
       const docs = await database.collection('agents').find({}).toArray();
-      if (docs.length > 0) {
-        return docs.map(({ _id, ...rest }) => ({ id: _id ? String(_id) : (rest as any).id, ...rest }));
-      }
+      return docs.map(({ _id, ...rest }) => ({ id: _id ? String(_id) : (rest as any).id, ...rest }));
     } catch (e) {
       console.debug('[MongoDB Atlas] Error getting agents:', e);
+      return allowMemoryFallback() ? memAgents : [];
     }
   }
-  return memAgents;
+  return allowMemoryFallback() ? memAgents : [];
 }
 
 export async function saveAgent(agent: any) {
   const { db: database, isConnected: online } = await getDb();
+  if ((!online || !database) && !allowMemoryFallback()) throw new Error('Database tidak tersedia');
   const id = agent.id || `AGN-${Math.floor(1000 + Math.random() * 9000)}`;
   const agentWithId = { ...agent, id };
 
@@ -211,6 +217,7 @@ export async function saveAgent(agent: any) {
       );
     } catch (e) {
       console.debug('[MongoDB Atlas] Error saving agent:', e);
+      throw e;
     }
   }
   return agentWithId;
@@ -221,18 +228,18 @@ export async function getAllTransactions() {
   if (online && database) {
     try {
       const docs = await database.collection('transactions').find({}).sort({ createdAt: -1 }).toArray();
-      if (docs.length > 0) {
-        return docs.map(({ _id, ...rest }) => ({ id: _id ? String(_id) : (rest as any).id, ...rest }));
-      }
+      return docs.map(({ _id, ...rest }) => ({ id: _id ? String(_id) : (rest as any).id, ...rest }));
     } catch (e) {
       console.debug('[MongoDB Atlas] Error getting transactions:', e);
+      return allowMemoryFallback() ? memTransactions : [];
     }
   }
-  return memTransactions;
+  return allowMemoryFallback() ? memTransactions : [];
 }
 
 export async function saveTransaction(tx: any) {
   const { db: database, isConnected: online } = await getDb();
+  if ((!online || !database) && !allowMemoryFallback()) throw new Error('Database tidak tersedia');
   const id = tx.id || `TRX-${Date.now()}`;
   const txWithId = { ...tx, id };
 
@@ -252,9 +259,47 @@ export async function saveTransaction(tx: any) {
       );
     } catch (e) {
       console.debug('[MongoDB Atlas] Error saving transaction:', e);
+      throw e;
     }
   }
   return txWithId;
+}
+
+export async function approveTransaction(id: string, notes?: string) {
+  const { db: database, isConnected: online } = await getDb();
+  if (!online || !database || !client) throw new Error('Database tidak tersedia');
+  const session = client.startSession();
+  let approved: any = null;
+  try {
+    await session.withTransaction(async () => {
+      const current = await database.collection('transactions').findOne({ _id: id }, { session });
+      if (!current || current.status !== 'Menunggu') throw new Error('Transaksi sudah diproses atau tidak ditemukan');
+      const memberId = String(current.memberId || '');
+      const member = await database.collection('members').findOne({ _id: memberId }, { session });
+      if (!member) throw new Error('Member transaksi tidak ditemukan');
+      const totalSaved = Number(member.totalSaved || 0) + Number(current.amount || 0);
+      if (!Number.isFinite(totalSaved) || totalSaved > Number(member.packagePrice || 0)) throw new Error('Setoran melebihi target paket member');
+      const updated = { ...current, id: String(current.id || current._id), status: 'Berhasil', ...(notes ? { notes } : {}) };
+      delete (updated as any)._id;
+      const transactionResult = await database.collection('transactions').updateOne(
+        { _id: id, status: 'Menunggu' },
+        { $set: { ...updated, updatedAt: new Date().toISOString() } },
+        { session }
+      );
+      if (transactionResult.modifiedCount !== 1) throw new Error('Transaksi sudah diproses');
+      await database.collection('members').updateOne(
+        { _id: memberId },
+        { $set: { totalSaved, lastDepositAmount: Number(current.amount || 0), lastDepositDate: String(current.date || ''), status: totalSaved >= Number(member.packagePrice || 0) ? 'Lunas' : 'Aktif', updatedAt: new Date().toISOString() } },
+        { session }
+      );
+      approved = updated;
+    });
+    if (!approved) throw new Error('Transaksi tidak dapat disetujui');
+    const { _id: _id, ...result } = approved;
+    return result;
+  } finally {
+    await session.endSession();
+  }
 }
 
 export async function getAllAdmins() {
@@ -262,18 +307,18 @@ export async function getAllAdmins() {
   if (online && database) {
     try {
       const docs = await database.collection('admins').find({}).toArray();
-      if (docs.length > 0) {
-        return docs.map(({ _id, ...rest }) => ({ id: _id ? String(_id) : (rest as any).id, ...rest }));
-      }
+      return docs.map(({ _id, ...rest }) => ({ id: _id ? String(_id) : (rest as any).id, ...rest }));
     } catch (e) {
       console.debug('[MongoDB Atlas] Error getting admins:', e);
+      return allowMemoryFallback() ? memAdmins : [];
     }
   }
-  return memAdmins;
+  return allowMemoryFallback() ? memAdmins : [];
 }
 
 export async function saveAdmin(admin: any) {
   const { db: database, isConnected: online } = await getDb();
+  if ((!online || !database) && !allowMemoryFallback()) throw new Error('Database tidak tersedia');
   const id = admin.id || `admin-${Date.now()}`;
   const adminWithId = { ...admin, id };
 
@@ -293,6 +338,7 @@ export async function saveAdmin(admin: any) {
       );
     } catch (e) {
       console.debug('[MongoDB Atlas] Error saving admin:', e);
+      throw e;
     }
   }
   return adminWithId;

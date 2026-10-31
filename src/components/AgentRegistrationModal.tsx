@@ -4,15 +4,8 @@ import {
   X,
   Store,
   Coins,
-  ShieldCheck,
   CheckCircle2,
-  TrendingUp,
-  MapPin,
-  CreditCard,
-  Building2,
-  Sparkles,
   Calculator,
-  ArrowRight,
   UserPlus
 } from 'lucide-react';
 
@@ -34,9 +27,6 @@ export const AgentRegistrationModal: React.FC<AgentRegistrationModalProps> = ({
   const [password, setPassword] = useState('');
   const [district, setDistrict] = useState('');
   const [regency, setRegency] = useState('Kab. Ciamis');
-  const [bankName, setBankName] = useState('Bank BRI');
-  const [accountNumber, setAccountNumber] = useState('');
-  const [accountHolder, setAccountHolder] = useState('');
 
   // Simulator fields
   const [targetPackages, setTargetPackages] = useState<number>(75);
@@ -101,10 +91,10 @@ export const AgentRegistrationModal: React.FC<AgentRegistrationModalProps> = ({
             <span>Kemitraan Resmi Sagitarius Parcel 2026/2027</span>
           </div>
           <h2 className="text-xl sm:text-2xl font-black text-white">
-            Portal Pendaftaran Agen & Perhitungan Komisi Otomatis
+            Portal Pengajuan Agen & Simulasi Komisi
           </h2>
           <p className="text-xs sm:text-sm text-blue-200 mt-1 max-w-2xl">
-            Bergabunglah menjadi mitra resmi outlet drop point. Dapatkan komisi bertingkat hingga 7% per paket lunas dan bonus tunai dicairkan H-10 Idul Fitri.
+            Ajukan pendaftaran sebagai mitra outlet drop point. Perhitungan pada halaman ini hanya simulasi; besaran komisi dan jadwal pembayaran mengikuti kesepakatan yang dikonfirmasi oleh tim.
           </p>
         </div>
 
@@ -118,10 +108,10 @@ export const AgentRegistrationModal: React.FC<AgentRegistrationModalProps> = ({
 
               <div>
                 <h3 className="text-2xl font-black text-slate-900">
-                  Selamat! Pendaftaran Mitra Agen Sukses 🎉
+                    Pengajuan pendaftaran diterima
                 </h3>
                 <p className="text-xs text-slate-600 mt-1">
-                  Outlet <strong>{registeredAgent.storeName}</strong> resmi terdaftar dalam jaringan distribusi resmi <strong>PT. Sagitarius Trinunggal Karya</strong>.
+                  Pengajuan untuk outlet <strong>{registeredAgent.storeName}</strong> tersimpan dan menunggu pemeriksaan admin. Akun belum dapat digunakan sampai statusnya diaktifkan.
                 </p>
               </div>
 
@@ -131,12 +121,12 @@ export const AgentRegistrationModal: React.FC<AgentRegistrationModalProps> = ({
                 <div className="flex justify-between items-start mb-3">
                   <div>
                     <span className="text-[10px] font-bold text-amber-300 uppercase tracking-widest block">
-                      SERTIFIKAT KEMITRAAN AGEN RESMI
+                      RINGKASAN PENGAJUAN AGEN
                     </span>
                     <span className="text-xs text-blue-200">Musim Idul Fitri 1448 H / 2026-2027</span>
                   </div>
-                  <span className="bg-emerald-500/30 text-emerald-300 border border-emerald-400/50 text-[10px] font-bold px-2.5 py-0.5 rounded-full font-mono">
-                    STATUS: AKTIF & TERVERIFIKASI
+                  <span className="bg-amber-500/20 text-amber-200 border border-amber-400/50 text-[10px] font-bold px-2.5 py-0.5 rounded-full font-mono">
+                    STATUS: {registeredAgent.status.toUpperCase()}
                   </span>
                 </div>
 
@@ -166,26 +156,20 @@ export const AgentRegistrationModal: React.FC<AgentRegistrationModalProps> = ({
                     </div>
                     <div className="flex justify-between">
                       <span className="text-slate-400">Koordinator Wilayah (Supervisi):</span>
-                      <span className="font-semibold text-amber-300">Budi Santoso (Priangan Timur)</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">Rekening Pencairan Komisi:</span>
-                      <span className="font-mono text-emerald-300">
-                        {bankName} {accountNumber ? `— ${accountNumber}` : '— Menunggu verifikasi cabang'}
-                      </span>
+                      <span className="font-semibold text-amber-300">Dikonfirmasi oleh tim</span>
                     </div>
                   </div>
                 </div>
 
                 <div className="text-[10px] text-slate-400 border-t border-white/10 pt-2 flex justify-between items-center">
                   <span>PT. SAGITARIUS TRINUNGGAL KARYA</span>
-                  <span className="text-amber-300 font-bold">Komisi s.d 7% + Bonus Tunai</span>
+                  <span className="text-amber-300 font-bold">Menunggu pemeriksaan admin</span>
                 </div>
               </div>
 
               {/* Action triggers */}
               <div className="space-y-2 pt-2">
-                {onGoToRegisterMember && (
+                {registeredAgent.status === 'Aktif' && onGoToRegisterMember && (
                   <button
                     onClick={() => onGoToRegisterMember(registeredAgent.id)}
                     className="w-full flex items-center justify-center space-x-2 py-3 bg-emerald-700 hover:bg-emerald-600 text-white font-black text-xs rounded-xl shadow-md transition"
@@ -199,7 +183,7 @@ export const AgentRegistrationModal: React.FC<AgentRegistrationModalProps> = ({
                   onClick={onClose}
                   className="w-full py-2.5 bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs rounded-xl shadow transition"
                 >
-                  Buka Portal & Dashboard Agen
+                  Tutup
                 </button>
               </div>
             </div>
@@ -269,7 +253,7 @@ export const AgentRegistrationModal: React.FC<AgentRegistrationModalProps> = ({
                       Rp {totalCommission.toLocaleString('id-ID')}
                     </div>
                     <p className="text-[10px] text-blue-100">
-                      Transfer serentak otomatis pada H-10 Idul Fitri (8 Nov 2026)
+                      Simulasi saja. Jadwal dan komisi final dikonfirmasi dalam perjanjian kemitraan.
                     </p>
                   </div>
 
@@ -283,7 +267,7 @@ export const AgentRegistrationModal: React.FC<AgentRegistrationModalProps> = ({
               <form onSubmit={handleSubmit} className="lg:col-span-7 space-y-4 text-xs">
                 <h4 className="font-bold text-slate-800 text-sm flex items-center gap-1.5">
                   <Store className="w-4 h-4 text-emerald-600" />
-                  <span>Formulir Pendaftaran & Data Rekening Pencairan</span>
+                  <span>Formulir Pengajuan Mitra</span>
                 </h4>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
@@ -366,60 +350,6 @@ export const AgentRegistrationModal: React.FC<AgentRegistrationModalProps> = ({
                     onChange={(e) => setDistrict(e.target.value)}
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-hidden font-medium"
                   />
-                </div>
-
-                {/* Bank Account for Automated Commission Payout */}
-                <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
-                  <div className="flex items-center space-x-1.5 text-slate-800 font-bold">
-                    <CreditCard className="w-4 h-4 text-blue-600" />
-                    <span>Rekening Bank untuk Pencairan Komisi Otomatis:</span>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                    <div>
-                      <label className="block text-[11px] text-slate-500 mb-0.5">Nama Bank</label>
-                      <select
-                        value={bankName}
-                        onChange={(e) => setBankName(e.target.value)}
-                        className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg bg-white"
-                      >
-                        <option value="Bank BRI">Bank BRI</option>
-                        <option value="Bank BCA">Bank BCA</option>
-                        <option value="Bank Mandiri">Bank Mandiri</option>
-                        <option value="Bank BNI">Bank BNI</option>
-                        <option value="Bank BJB">Bank BJB</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-[11px] text-slate-500 mb-0.5">Nomor Rekening</label>
-                      <input
-                        type="text"
-                        placeholder="Contoh: 012401004921"
-                        value={accountNumber}
-                        onChange={(e) => setAccountNumber(e.target.value)}
-                        className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg font-mono"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[11px] text-slate-500 mb-0.5">Atas Nama Rekening</label>
-                      <input
-                        type="text"
-                        placeholder="Nama pemilik buku"
-                        value={accountHolder}
-                        onChange={(e) => setAccountHolder(e.target.value)}
-                        className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-xl flex items-start space-x-2 text-blue-900 text-[11px]">
-                  <ShieldCheck className="w-4 h-4 text-blue-700 shrink-0 mt-0.5" />
-                  <p>
-                    Data rekening akan dienkripsi dan diverifikasi oleh tim keuangan pusat. Komisi dicairkan langsung tanpa potongan biaya transfer antar bank.
-                  </p>
                 </div>
 
                 <div className="flex justify-end gap-2 pt-2 border-t border-slate-200">

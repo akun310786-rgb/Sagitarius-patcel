@@ -5,6 +5,7 @@ export interface AuthenticatedUser {
   role: Exclude<UserRole, 'public'>;
   name: string;
   agentId?: string;
+  adminRole?: AdminAccount['role'];
 }
 
 export interface ParcelPackage {
@@ -36,7 +37,7 @@ export interface Agent {
   phone: string;
   memberCount: number;
   totalOmset: number;
-  status: 'Aktif' | 'Non-aktif';
+  status: 'Aktif' | 'Non-aktif' | 'Menunggu';
 }
 
 export interface Member {

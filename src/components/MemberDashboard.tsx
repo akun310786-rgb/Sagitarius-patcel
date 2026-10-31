@@ -38,6 +38,7 @@ interface MemberDashboardProps {
   onOpenQR: () => void;
   onViewKuitansi: (tx: Transaction) => void;
   onOpenPackageDetail: (pkg: ParcelPackage) => void;
+  agentPhone?: string;
   onLogout?: () => void;
 }
 
@@ -48,6 +49,7 @@ export const MemberDashboard: React.FC<MemberDashboardProps> = ({
   onOpenQR,
   onViewKuitansi,
   onOpenPackageDetail,
+  agentPhone,
   onLogout
 }) => {
   const [statusFilter, setStatusFilter] = useState<'all' | 'Berhasil' | 'Menunggu'>('all');
@@ -78,7 +80,8 @@ export const MemberDashboard: React.FC<MemberDashboardProps> = ({
   const [showAddressModal, setShowAddressModal] = useState<boolean>(false);
 
   const pendingTransactions = transactions.filter((t) => t.status === 'Menunggu');
-  const recentSuccess = transactions.filter((t) => t.status === 'Berhasil');
+  const latestTransaction = transactions[0];
+  const agentPhoneDigits = agentPhone?.replace(/\D/g, '').replace(/^0/, '62');
 
   const initials = member.name
     .split(' ')
@@ -358,20 +361,10 @@ export const MemberDashboard: React.FC<MemberDashboardProps> = ({
             </div>
             <div>
               <span className="font-bold text-amber-900 block text-sm">Outlet Agen Anda:</span>
-              <p className="text-amber-800">
-                Punya pertanyaan atau ingin setor tunai langsung? Temui Agen Andi di <strong>Toko Makmur Ciamis</strong>.
-              </p>
+              <p className="text-amber-800">Agen pembina akun Anda: <strong>{member.agentName}</strong>. Silakan hubungi agen melalui nomor kontak yang terdaftar.</p>
             </div>
           </div>
-          <a
-            href="https://wa.me/6285298765432"
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center space-x-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-xs shrink-0 transition"
-          >
-            <MessageCircle className="w-4 h-4" />
-            <span>WhatsApp Agen (0852-9876-5432)</span>
-          </a>
+          {agentPhoneDigits && <a href={`https://wa.me/${agentPhoneDigits}`} target="_blank" rel="noreferrer" className="flex items-center space-x-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-xs shrink-0 transition"><MessageCircle className="w-4 h-4" /><span>WhatsApp Agen</span></a>}
         </div>
 
         {/* Dashboard Title & Quick Action Bar */}
@@ -762,44 +755,14 @@ export const MemberDashboard: React.FC<MemberDashboardProps> = ({
                     Notifikasi Terbaru
                   </span>
                 </div>
-                <button
-                  onClick={() => alert('Semua riwayat notifikasi WhatsApp & SMS sudah tersinkronisasi.')}
-                  className="text-[11px] text-purple-800 font-semibold hover:underline"
-                >
-                  Lihat Semua
+                <button onClick={() => document.getElementById('histori-buku')?.scrollIntoView({ behavior: 'smooth' })} className="text-[11px] text-purple-800 font-semibold hover:underline">
+                  Lihat Riwayat
                 </button>
               </div>
 
               <div className="space-y-2.5 text-xs">
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-1">
-                  <div className="flex justify-between items-center">
-                    <span className="font-bold text-slate-900">Setoran Anda Diverifikasi</span>
-                    <span className="text-[10px] text-slate-400">12 Okt 2026</span>
-                  </div>
-                  <p className="text-[11px] text-slate-600 leading-normal">
-                    Setoran sebesar Rp 100.000 (TRX-20261012-001) telah diverifikasi oleh Agen Andi Pratama.
-                  </p>
-                </div>
-
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-1">
-                  <div className="flex justify-between items-center">
-                    <span className="font-bold text-slate-900">Penyesuaian Jadwal Pengambilan Paket</span>
-                    <span className="text-[10px] text-slate-400">10 Okt 2026</span>
-                  </div>
-                  <p className="text-[11px] text-slate-600 leading-normal">
-                    Paket Keluarga 2027 siap diambil di Toko Makmur mulai tanggal 18 Nov 2026 dengan menunjukkan Kode QR.
-                  </p>
-                </div>
-
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-1">
-                  <div className="flex justify-between items-center">
-                    <span className="font-bold text-amber-900">Promo Spesial Lebaran</span>
-                    <span className="text-[10px] text-slate-400">08 Okt 2026</span>
-                  </div>
-                  <p className="text-[11px] text-slate-600 leading-normal">
-                    Dapatkan bonus 1 botol sirup tambahan untuk pelunasan sebelum akhir Oktober 2026!
-                  </p>
-                </div>
+                {latestTransaction ? <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-1"><div className="flex justify-between items-center"><span className="font-bold text-slate-900">Setoran {latestTransaction.status === 'Berhasil' ? 'Diverifikasi' : latestTransaction.status === 'Ditolak' ? 'Perlu Tindak Lanjut' : 'Menunggu Verifikasi'}</span><span className="text-[10px] text-slate-400">{latestTransaction.date}</span></div><p className="text-[11px] text-slate-600 leading-normal">{latestTransaction.invoiceNo}: Rp {latestTransaction.amount.toLocaleString('id-ID')} — {latestTransaction.status}.</p></div> : <p className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-[11px] text-slate-500">Belum ada setoran pada riwayat akun ini.</p>}
+                {member.pickupDate && <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-1"><span className="font-bold text-slate-900">Jadwal pengambilan pada profil</span><p className="text-[11px] text-slate-600">{member.pickupDate}</p></div>}
               </div>
             </div>
 
@@ -864,7 +827,7 @@ export const MemberDashboard: React.FC<MemberDashboardProps> = ({
                     <td className="py-3 px-3">
                       <span className="text-slate-700">{tx.method}</span>
                       {tx.method === 'Tunai Agen' && (
-                        <span className="text-[10px] text-slate-400 block">via Andi Pratama</span>
+                        <span className="text-[10px] text-slate-400 block">Setoran agen</span>
                       )}
                     </td>
                     <td className="py-3 px-3">

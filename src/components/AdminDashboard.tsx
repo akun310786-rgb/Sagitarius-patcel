@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Transaction, ParcelPackage, Agent, Member, AdminAccount } from '../types/parcel';
-import { PACKAGES, AGENTS } from '../data/mockData';
 import { AdminManagerModal } from './AdminManagerModal';
 import {
   ShieldAlert,
@@ -46,8 +45,11 @@ interface AdminDashboardProps {
   agents?: Agent[];
   members?: Member[];
   adminAccounts?: AdminAccount[];
+  adminRole?: AdminAccount['role'];
+  adminName?: string;
   onAddAdminAccount?: (newAdmin: AdminAccount, password: string) => Promise<boolean>;
   onToggleAdminStatus?: (id: string) => Promise<void>;
+  onUpdateAgent?: (agent: Agent) => Promise<void>;
   onDeleteAdminAccount?: (id: string) => Promise<void>;
   onApproveTransaction: (txId: string) => void;
   onRejectTransaction: (txId: string) => void;
@@ -60,12 +62,15 @@ interface AdminDashboardProps {
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   transactions,
-  packages = PACKAGES,
-  agents = AGENTS,
+  packages = [],
+  agents = [],
   members = [],
   adminAccounts = [],
+  adminRole = 'staff',
+  adminName = 'Admin',
   onAddAdminAccount,
   onToggleAdminStatus,
+  onUpdateAgent,
   onDeleteAdminAccount,
   onApproveTransaction,
   onRejectTransaction,
@@ -82,10 +87,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [catalogCategory, setCatalogCategory] = useState<string>('all');
   const [catalogSearch, setCatalogSearch] = useState<string>('');
   const [agentSearch, setAgentSearch] = useState<string>('');
+  const canManageOperations = adminRole === 'superadmin' || adminRole === 'admin';
+  const canManageAdmins = adminRole === 'superadmin';
+  const canApproveTransactions = canManageOperations || adminRole === 'finance';
 
-  const allAgents = agents && agents.length > 0 ? agents : AGENTS;
+  const allAgents = agents;
 
-  const allPackages = packages && packages.length > 0 ? packages : PACKAGES;
+  const allPackages = packages;
+  const totalSavings = members.reduce((sum, member) => sum + (Number(member.totalSaved) || 0), 0);
+  const totalTarget = members.reduce((sum, member) => sum + (Number(member.packagePrice) || 0), 0);
+  const savingsPercent = totalTarget > 0 ? Math.min(100, (totalSavings / totalTarget) * 100) : 0;
+  const successfulCount = transactions.filter((tx) => tx.status === 'Berhasil').length;
+  const waitingCount = transactions.filter((tx) => tx.status === 'Menunggu').length;
+  const rejectedCount = transactions.filter((tx) => tx.status === 'Ditolak').length;
+  const transactionCount = transactions.length;
+  const verifiedPct = transactionCount ? successfulCount / transactionCount : 0;
+  const waitingPct = transactionCount ? waitingCount / transactionCount : 0;
+  const rejectedPct = transactionCount ? rejectedCount / transactionCount : 0;
+  const roleLabels: Record<AdminAccount['role'], string> = {
+    superadmin: 'Super Admin HQ', admin: 'Admin Operasional', finance: 'Admin Keuangan', staff: 'Staff Verifikasi'
+  };
 
   const filteredCatalog = allPackages.filter((pkg) => {
     const matchCat = catalogCategory === 'all' || pkg.category === catalogCategory;
@@ -133,52 +154,51 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <h1 className="text-xl font-bold text-slate-900">Selamat Datang, Admin Pusat</h1>
+                <h1 className="text-xl font-bold text-slate-900">Selamat Datang, {adminName}</h1>
                 <span className="bg-rose-100 text-rose-800 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                  Super Admin HQ
+                  {roleLabels[adminRole]}
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
-                PT. Sagitarius Trinunggal Karya · Kantor Pusat Operasional Nasional · ID:{' '}
-                <span className="font-mono font-semibold">ADM-HQ-001</span>
+                PT. Sagitarius Trinunggal Karya · Hak akses: {roleLabels[adminRole]}
               </p>
             </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <button
+            {canManageAdmins && <button
               onClick={() => setIsAdminModalOpen(true)}
               className="flex items-center space-x-1.5 px-3.5 py-2.5 bg-rose-700 hover:bg-rose-800 text-white rounded-xl text-xs font-bold shadow-xs transition"
               title="Kelola Akun Admin & Tambah Akun Baru"
             >
               <ShieldCheck className="w-4 h-4 text-rose-200" />
               <span>+ Kelola & Tambah Admin</span>
-            </button>
+            </button>}
 
-            <button
+            {canManageOperations && <button
               onClick={onOpenCatalogManager}
               className="flex items-center space-x-1.5 px-3.5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold shadow-xs transition"
             >
               <PackageCheck className="w-4 h-4 text-emerald-300" />
               <span>+ Tambah / Edit Paket</span>
-            </button>
+            </button>}
 
-            <button
+            {adminRole === 'superadmin' && <button
               onClick={onOpenSupabaseConsole}
               className="flex items-center space-x-1.5 px-3.5 py-2.5 bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-500/30 rounded-xl text-xs font-bold shadow-xs transition"
               title="Lihat Database Sagitarius"
             >
               <Database className="w-4 h-4" />
               <span>Lihat Database</span>
-            </button>
+            </button>}
 
-            <button
+            {adminRole !== 'staff' && <button
               onClick={handleExportCSV}
               className="flex items-center space-x-1.5 px-3.5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-xs transition"
             >
               <Download className="w-4 h-4 text-amber-400" />
               <span>Export CSV</span>
-            </button>
+            </button>}
 
             {onLogout && (
               <button
@@ -207,7 +227,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <span>Verifikasi Setoran & Transaksi</span>
           </button>
 
-          <button
+          {canManageOperations && <button
             onClick={() => setAdminTab('katalog')}
             className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-bold transition ${
               adminTab === 'katalog'
@@ -220,9 +240,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <span className="bg-amber-400 text-slate-950 text-[10px] px-1.5 py-0.5 rounded-md font-black">
               Flyer
             </span>
-          </button>
+          </button>}
 
-          <button
+          {canManageOperations && <button
             onClick={() => setAdminTab('agen')}
             className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-bold transition ${
               adminTab === 'agen'
@@ -232,9 +252,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           >
             <Store className="w-4 h-4 text-blue-400" />
             <span>Mitra Agen & Jaringan ({allAgents.length})</span>
-          </button>
+          </button>}
 
-          <button
+          {canManageOperations && <button
             onClick={() => setAdminTab('logistik')}
             className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-bold transition ${
               adminTab === 'logistik'
@@ -244,9 +264,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           >
             <Truck className="w-4 h-4" />
             <span>Gudang & Logistik Distribusi</span>
-          </button>
+          </button>}
 
-          <button
+          {canManageAdmins && <button
             onClick={() => setAdminTab('admins')}
             className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-bold transition ${
               adminTab === 'admins'
@@ -256,7 +276,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           >
             <ShieldCheck className="w-4 h-4 text-rose-500" />
             <span>Akun Admin ({adminAccounts.length})</span>
-          </button>
+          </button>}
         </div>
 
         {/* TAB 1: TRANSAKSI & VERIFIKASI */}
@@ -271,10 +291,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <Users className="w-4 h-4" />
                   </div>
                 </div>
-                <div className="text-3xl font-black text-slate-900">8.542</div>
+                <div className="text-3xl font-black text-slate-900">{members.length.toLocaleString('id-ID')}</div>
                 <div className="flex items-center space-x-1 text-xs text-emerald-600 font-medium mt-1">
                   <TrendingUp className="w-3.5 h-3.5" />
-                  <span>+18.4% dari tahun lalu</span>
+                  <span>Jumlah akun member pada data saat ini</span>
                 </div>
               </div>
 
@@ -285,8 +305,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <Store className="w-4 h-4" />
                   </div>
                 </div>
-                <div className="text-3xl font-black text-slate-900">246</div>
-                <div className="text-xs text-slate-400 mt-1">Terverifikasi & Aktif</div>
+                <div className="text-3xl font-black text-slate-900">{allAgents.length.toLocaleString('id-ID')}</div>
+                <div className="text-xs text-slate-400 mt-1">Agen pada data saat ini</div>
               </div>
 
               <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
@@ -296,8 +316,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <DollarSign className="w-4 h-4" />
                   </div>
                 </div>
-                <div className="text-3xl font-black text-slate-900">Rp 2.9 Miliar</div>
-                <div className="text-xs text-slate-400 mt-1">Target akumulasi paket 2027</div>
+                <div className="text-3xl font-black text-slate-900">Rp {totalTarget.toLocaleString('id-ID')}</div>
+                <div className="text-xs text-slate-400 mt-1">Total target tabungan member saat ini</div>
               </div>
 
               <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
@@ -307,9 +327,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <CheckCircle2 className="w-4 h-4" />
                   </div>
                 </div>
-                <div className="text-3xl font-black text-emerald-700">Rp 2.4 Miliar</div>
+                <div className="text-3xl font-black text-emerald-700">Rp {totalSavings.toLocaleString('id-ID')}</div>
                 <div className="text-xs text-emerald-600 font-medium mt-1">
-                  84.0% terhimpun aman di rekening
+                  {savingsPercent.toFixed(1)}% dari total target member
                 </div>
               </div>
             </div>
@@ -324,7 +344,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       Grafik Tren Pertumbuhan Tabungan Bulanan
                     </h3>
                     <p className="text-xs text-slate-500">
-                      Total akumulasi dana setoran tabungan masuk per bulan (Jan - Okt 2026)
+                      Grafik ilustrasi data contoh; belum terhubung ke rekap bulanan.
                     </p>
                   </div>
                   <span className="text-xs font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-lg">
@@ -417,8 +437,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         fill="transparent"
                         stroke="#059669"
                         strokeWidth="12"
-                        strokeDasharray="251.2"
-                        strokeDashoffset={251.2 * (1 - 0.78)}
+                        strokeDasharray={`${251.2 * verifiedPct} 251.2`}
+                        strokeDashoffset={0}
                         strokeLinecap="round"
                       />
                       {/* Pending: 15% */}
@@ -429,14 +449,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         fill="transparent"
                         stroke="#f59e0b"
                         strokeWidth="12"
-                        strokeDasharray="251.2"
-                        strokeDashoffset={251.2 * (1 - 0.15)}
+                        strokeDasharray={`${251.2 * waitingPct} 251.2`}
+                        strokeDashoffset={-251.2 * verifiedPct}
                         strokeLinecap="round"
                         className="opacity-70"
                       />
                     </svg>
                     <div className="absolute text-center">
-                      <span className="text-xl font-black text-slate-900">78%</span>
+                      <span className="text-xl font-black text-slate-900">{Math.round(verifiedPct * 100)}%</span>
                       <span className="text-[10px] text-slate-400 block uppercase font-bold">Lolos Cek</span>
                     </div>
                   </div>
@@ -447,21 +467,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 inline-block" />
                         <span className="text-slate-600">Terverifikasi Resmi</span>
                       </div>
-                      <span className="font-bold text-slate-800">78% (6.662)</span>
+                      <span className="font-bold text-slate-800">{Math.round(verifiedPct * 100)}% ({successfulCount})</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-1.5">
                         <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block" />
                         <span className="text-slate-600">Menunggu Verifikasi</span>
                       </div>
-                      <span className="font-bold text-slate-800">15% (1.281)</span>
+                      <span className="font-bold text-slate-800">{Math.round(waitingPct * 100)}% ({waitingCount})</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-1.5">
                         <span className="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block" />
                         <span className="text-slate-600">Dibatalkan / Revisi</span>
                       </div>
-                      <span className="font-bold text-slate-800">7% (599)</span>
+                      <span className="font-bold text-slate-800">{Math.round(rejectedPct * 100)}% ({rejectedCount})</span>
                     </div>
                   </div>
                 </div>
@@ -547,7 +567,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           </span>
                         </td>
                         <td className="py-3 px-3 text-right">
-                          {tx.status === 'Menunggu' ? (
+                              {tx.status === 'Menunggu' && canApproveTransactions ? (
                             <div className="inline-flex items-center gap-1.5">
                               <button
                                 onClick={() => onApproveTransaction(tx.id)}
@@ -562,7 +582,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                 Tolak
                               </button>
                             </div>
-                          ) : (
+                              ) : tx.status !== 'Menunggu' ? (
                             <button
                               onClick={() => onViewKuitansi(tx)}
                               className="inline-flex items-center space-x-1 px-2.5 py-1 bg-white border border-slate-300 hover:border-emerald-500 hover:text-emerald-700 rounded-lg text-[11px] font-medium text-slate-700 transition"
@@ -849,6 +869,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       <th className="py-3 px-4 text-center">Member Binaan</th>
                       <th className="py-3 px-4 text-right">Akumulasi Omset</th>
                       <th className="py-3 px-4 text-center">Status</th>
+                      {canManageOperations && <th className="py-3 px-4 text-center">Aksi</th>}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -880,16 +901,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             <div className="text-[11px] text-slate-400">{agent.regency}</div>
                           </td>
                           <td className="py-3.5 px-4 text-center font-bold text-slate-800 text-sm">
-                            {agent.memberCount}
+                            {members.filter((member) => member.agentId === agent.id).length}
                           </td>
                           <td className="py-3.5 px-4 text-right font-mono font-bold text-emerald-800 text-sm">
-                            Rp {agent.totalOmset.toLocaleString('id-ID')}
+                            Rp {transactions.filter((tx) => tx.agentId === agent.id && tx.status === 'Berhasil').reduce((sum, tx) => sum + tx.amount, 0).toLocaleString('id-ID')}
                           </td>
                           <td className="py-3.5 px-4 text-center">
-                            <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                            <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${agent.status === 'Aktif' ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : agent.status === 'Menunggu' ? 'bg-amber-100 text-amber-800 border-amber-300' : 'bg-slate-100 text-slate-600 border-slate-300'}`}>
                               {agent.status}
                             </span>
                           </td>
+                          {canManageOperations && <td className="py-3.5 px-4 text-center">
+                            <button type="button" onClick={() => onUpdateAgent?.({ ...agent, status: agent.status === 'Aktif' ? 'Non-aktif' : 'Aktif' })} className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[10px] font-bold ${agent.status === 'Aktif' ? 'bg-slate-100 text-slate-700 hover:bg-rose-100 hover:text-rose-700' : 'bg-emerald-700 text-white hover:bg-emerald-800'}`}>
+                              <Power className="w-3 h-3" />{agent.status === 'Aktif' ? 'Nonaktifkan' : 'Aktifkan'}
+                            </button>
+                          </td>}
                         </tr>
                       ))}
                   </tbody>
@@ -906,8 +932,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
                 <div>
-                  <span className="text-xs text-slate-500 block">Dalam Pengepakan Gudang</span>
-                  <span className="text-2xl font-black text-slate-900">140 Paket</span>
+                  <span className="text-xs text-slate-500 block">Member Aktif</span>
+                  <span className="text-2xl font-black text-slate-900">{members.filter((member) => member.status === 'Aktif').length} Paket</span>
                 </div>
                 <div className="p-3 bg-amber-50 text-amber-600 rounded-xl">
                   <PackageCheck className="w-6 h-6" />
@@ -916,8 +942,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
               <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
                 <div>
-                  <span className="text-xs text-slate-500 block">Sedang Didistribusikan</span>
-                  <span className="text-2xl font-black text-blue-700">564 Paket</span>
+                  <span className="text-xs text-slate-500 block">Member Menunggu</span>
+                  <span className="text-2xl font-black text-blue-700">{members.filter((member) => member.status === 'Menunggu').length} Paket</span>
                 </div>
                 <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
                   <Truck className="w-6 h-6" />
@@ -926,8 +952,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
               <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
                 <div>
-                  <span className="text-xs text-slate-500 block">Selesai / Diterima Member</span>
-                  <span className="text-2xl font-black text-emerald-700">1.580 Paket</span>
+                  <span className="text-xs text-slate-500 block">Member Lunas</span>
+                  <span className="text-2xl font-black text-emerald-700">{members.filter((member) => member.status === 'Lunas').length} Paket</span>
                 </div>
                 <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
                   <CheckCircle2 className="w-6 h-6" />
@@ -936,8 +962,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
               <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
                 <div>
-                  <span className="text-xs text-slate-500 block">Dibatalkan / Retur</span>
-                  <span className="text-2xl font-black text-rose-600">22 Paket</span>
+                  <span className="text-xs text-slate-500 block">Transaksi Ditolak</span>
+                  <span className="text-2xl font-black text-rose-600">{rejectedCount}</span>
                 </div>
                 <div className="p-3 bg-rose-50 text-rose-600 rounded-xl">
                   <RotateCcw className="w-6 h-6" />
@@ -948,7 +974,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4">
               <h3 className="font-bold text-base text-slate-900">Jadwal & Standar Distribusi Gudang Pusat</h3>
               <p className="text-xs text-slate-500">
-                Penyaluran logistik parcel ke 246 Agen Binaan di Priangan Timur (Tasikmalaya, Ciamis, Banjar, Pangandaran, Garut).
+                Penyaluran logistik parcel ke {allAgents.length} agen yang tercatat di data saat ini.
               </p>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
                 <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-1">
@@ -975,7 +1001,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         )}
 
         {/* TAB 5: KELOLA AKUN ADMIN */}
-        {adminTab === 'admins' && (
+        {adminTab === 'admins' && canManageAdmins && (
           <div className="space-y-6">
             {/* Admin Header Action Card */}
             <div className="bg-gradient-to-r from-slate-900 via-rose-950 to-slate-900 text-white rounded-3xl p-6 border border-rose-900/40 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -1065,7 +1091,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                 <span className="text-[9px] bg-amber-100 text-amber-800 font-bold px-1.5 py-0.5 rounded">
                                   Utama
                                 </span>
-                              )}
+                              ) : <span className="text-[10px] text-slate-400">Perlu hak verifikasi</span>}
                             </div>
                             <span className="text-xs text-slate-500 font-mono">@{adm.username}</span>
                           </div>
@@ -1145,7 +1171,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       </div>
 
       {/* Admin Manager Modal */}
-      {isAdminModalOpen && (
+      {isAdminModalOpen && canManageAdmins && (
         <AdminManagerModal
           onClose={() => setIsAdminModalOpen(false)}
           adminAccounts={adminAccounts}

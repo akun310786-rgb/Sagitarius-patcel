@@ -94,7 +94,7 @@ export const KuitansiModal: React.FC<KuitansiModalProps> = ({ transaction, onClo
           <div className="p-3 bg-amber-50/70 border border-amber-200/60 rounded-xl flex items-start space-x-2 text-xs text-amber-900">
             <ShieldCheck className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
             <p className="leading-relaxed">
-              Dokumen ini sah dihasilkan oleh Sistem Komputerisasi Sagitarius Parcel 2026/2027. Setoran terikat jaminan paket Idul Fitri 1448 H.
+              Bukti transaksi digital Sagitarius Parcel. Status setoran mengikuti hasil verifikasi pada dashboard.
             </p>
           </div>
         </div>

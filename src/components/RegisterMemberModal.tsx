@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { PACKAGES, AGENTS } from '../data/mockData';
 import { Member, ParcelPackage, Agent } from '../types/parcel';
 import {
   X,
@@ -30,8 +29,8 @@ export const RegisterMemberModal: React.FC<RegisterMemberModalProps> = ({
   onRegister,
   onGoToDeposit,
   defaultPackageId,
-  packages = PACKAGES,
-  agents = AGENTS
+  packages = [],
+  agents = []
 }) => {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -40,13 +39,16 @@ export const RegisterMemberModal: React.FC<RegisterMemberModalProps> = ({
   const [password, setPassword] = useState('');
   const [address, setAddress] = useState('');
   const [regency, setRegency] = useState('Kab. Ciamis');
-  const [packageId, setPackageId] = useState(defaultPackageId || packages[0]?.id || 'pkg-bunda-reguler');
-  const [agentId, setAgentId] = useState(agents[0]?.id || 'ag-012');
+  const [packageId, setPackageId] = useState(defaultPackageId || packages[0]?.id || '');
+  const [agentId, setAgentId] = useState(agents[0]?.id || '');
   const [paymentFrequency, setPaymentFrequency] = useState<'harian' | 'mingguan' | 'bulanan'>('harian');
   const [registeredMember, setRegisteredMember] = useState<Member | null>(null);
 
-  const selectedPkg = packages.find((p) => p.id === packageId) || packages[0] || PACKAGES[0];
-  const selectedAgent = agents.find((a) => a.id === agentId) || agents[0] || AGENTS[0];
+  const selectedPkg = packages.find((p) => p.id === packageId) || packages[0];
+  const selectedAgent = agents.find((a) => a.id === agentId) || agents[0];
+  if (!selectedPkg || !selectedAgent) {
+    return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"><div className="max-w-md rounded-2xl bg-white p-6 text-center"><h2 className="font-bold text-slate-900">Pendaftaran belum tersedia</h2><p className="mt-2 text-sm text-slate-600">Paket atau agen belum berhasil dimuat. Silakan coba lagi nanti atau hubungi tim Sagitarius Parcel.</p><button onClick={onClose} className="mt-4 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Tutup</button></div></div>;
+  }
 
   // Daily, weekly, monthly calculations
   const dailyRate = selectedPkg.dailyPayment || Math.round(selectedPkg.targetPrice / 325);
@@ -60,7 +62,6 @@ export const RegisterMemberModal: React.FC<RegisterMemberModalProps> = ({
     const randomIdNumber = Math.floor(1000 + Math.random() * 9000);
     const newMemberId = `mem-${Date.now()}`;
     const generatedUsername = username.trim() || name.trim().toLowerCase().replace(/\s+/g, '') + randomIdNumber;
-    const generatedEmail = email.trim() || `${generatedUsername}@gmail.com`;
 
     const newMember: Member = {
       id: newMemberId,
@@ -68,8 +69,8 @@ export const RegisterMemberModal: React.FC<RegisterMemberModalProps> = ({
       name: name.trim(),
       phone: phone.trim(),
       username: generatedUsername,
-      email: generatedEmail,
-      address: address.trim() || 'Jl. Raya Ciamis No. 10',
+      email: email.trim() || undefined,
+      address: address.trim(),
       regency,
       agentId: selectedAgent.id,
       agentName: `${selectedAgent.ownerName} (${selectedAgent.storeName})`,
@@ -80,8 +81,8 @@ export const RegisterMemberModal: React.FC<RegisterMemberModalProps> = ({
       lastDepositAmount: 0,
       lastDepositDate: '-',
       status: 'Aktif',
-      joinDate: '26 Okt 2026',
-      pickupDate: '18 Nov 2026 (H-7 Lebaran)',
+      joinDate: new Date().toLocaleDateString('id-ID'),
+      pickupDate: '-',
       qrToken: `QR-20261026-${randomIdNumber}-${name.toUpperCase().replace(/\s+/g, '-')}`
     };
 
@@ -277,7 +278,7 @@ export const RegisterMemberModal: React.FC<RegisterMemberModalProps> = ({
                   </div>
                   <div>
                     <label className="block font-semibold text-slate-700 mb-1">
-                      Alamat Email *
+                      Alamat Email (opsional)
                     </label>
                     <input
                       type="email"

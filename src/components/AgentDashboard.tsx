@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Agent, Member, Transaction } from '../types/parcel';
-import { AGENTS } from '../data/mockData';
 import {
   Store,
   Users,
@@ -22,12 +21,13 @@ import {
 
 interface AgentDashboardProps {
   members: Member[];
+  transactions: Transaction[];
   onOpenRegister: () => void;
   onOpenScan: () => void;
   onOpenQuickDeposit: (member: Member) => void;
   onOpenQR: (member: Member) => void;
   onOpenCommissionSimulator: () => void;
-  agents?: Agent[];
+  agents: Agent[];
   activeAgentId?: string;
   onSelectAgent?: (agentId: string) => void;
   onLogout?: () => void;
@@ -35,26 +35,29 @@ interface AgentDashboardProps {
 
 export const AgentDashboard: React.FC<AgentDashboardProps> = ({
   members,
+  transactions,
   onOpenRegister,
   onOpenScan,
   onOpenQuickDeposit,
   onOpenQR,
   onOpenCommissionSimulator,
-  agents = AGENTS,
+  agents,
   activeAgentId,
   onSelectAgent,
   onLogout
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'Aktif' | 'Lunas'>('all');
-  const [chartRange, setChartRange] = useState<'7' | '30' | '1y'>('30');
+  const allAgents = agents;
+  const currentAgent = allAgents.find((a) => a.id === activeAgentId);
+  if (!currentAgent) return <div className="min-h-screen flex items-center justify-center p-6 text-center"><div className="max-w-md bg-white rounded-2xl border border-slate-200 p-6"><h1 className="font-bold text-slate-900">Profil agen belum tersedia</h1><p className="text-sm text-slate-600 mt-2">Data agen belum berhasil dimuat dari server. Silakan muat ulang halaman atau hubungi admin.</p></div></div>;
 
-  const allAgents = agents && agents.length > 0 ? agents : AGENTS;
-  const currentAgent = allAgents.find((a) => a.id === activeAgentId) || allAgents[0];
-
-  // Specific members for this agent (or fallback to all members if none assigned yet)
   const agentSpecificMembers = members.filter((m) => m.agentId === currentAgent.id);
-  const displayMembers = agentSpecificMembers.length > 0 ? agentSpecificMembers : members;
+  const displayMembers = agentSpecificMembers;
+  const agentTransactions = transactions.filter((tx) => tx.agentId === currentAgent.id);
+  const verifiedTransactions = agentTransactions.filter((tx) => tx.status === 'Berhasil');
+  const verifiedTotal = verifiedTransactions.reduce((sum, tx) => sum + tx.amount, 0);
+  const recentTransactions = agentTransactions.slice(0, 3);
 
   const filteredMembers = displayMembers.filter((m) => {
     const matchSearch =
@@ -67,8 +70,6 @@ export const AgentDashboard: React.FC<AgentDashboardProps> = ({
 
   const totalOmset = displayMembers.reduce((acc, m) => acc + m.totalSaved, 0);
   const totalPaketTerjual = displayMembers.length;
-  const commissionRate = totalPaketTerjual > 100 ? 0.07 : totalPaketTerjual > 50 ? 0.06 : 0.05;
-  const estimasiKomisi = Math.round(totalOmset * commissionRate);
 
   return (
     <div className="bg-[#f8fafc] min-h-screen pb-16">
@@ -87,7 +88,7 @@ export const AgentDashboard: React.FC<AgentDashboardProps> = ({
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
-                <strong className="text-slate-800">{currentAgent.storeName}</strong> · {currentAgent.district}, {currentAgent.regency} · Koordinator: <strong className="text-slate-700">Budi Santoso (Priangan Timur)</strong>
+                <strong className="text-slate-800">{currentAgent.storeName}</strong> · {currentAgent.district}, {currentAgent.regency}
               </p>
             </div>
           </div>
@@ -165,7 +166,7 @@ export const AgentDashboard: React.FC<AgentDashboardProps> = ({
             </div>
             <div className="text-3xl font-black text-slate-900">{totalPaketTerjual}</div>
             <div className="text-xs text-slate-400 mt-1">
-              Target kemitraan: 100 Paket
+              Total member yang terdaftar
             </div>
           </div>
 
@@ -194,13 +195,11 @@ export const AgentDashboard: React.FC<AgentDashboardProps> = ({
                 <Coins className="w-4 h-4" />
               </div>
             </div>
-            <div className="text-2xl font-black text-amber-700">
-              Rp 1.750.000
+            <div className="text-base font-black text-amber-700">
+              Dihitung setelah verifikasi
             </div>
             <div className="flex items-center justify-between text-[11px] text-slate-500 mt-1">
-              <span className="text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded">
-                Tier 2 (6% Silver)
-              </span>
+              <span className="text-slate-600 font-medium">Ketentuan komisi mengikuti perjanjian</span>
               <span className="text-blue-600 font-semibold group-hover:underline">
                 Rincian &rarr;
               </span>
@@ -208,158 +207,21 @@ export const AgentDashboard: React.FC<AgentDashboardProps> = ({
           </div>
         </div>
 
-        {/* Chart & Quick Activities */}
+        {/* Agent summary & recent transactions */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Chart Section */}
-          <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-bold text-slate-900">
-                  Grafik Penjualan & Setoran Agen
-                </h3>
-                <p className="text-xs text-slate-500">
-                  Tren perkembangan setoran tabungan masuk di outlet Toko Makmur Ciamis
-                </p>
-              </div>
-
-              <div className="flex gap-1 text-[11px] bg-slate-100 p-1 rounded-lg font-semibold">
-                <button
-                  onClick={() => setChartRange('7')}
-                  className={`px-2 py-0.5 rounded ${
-                    chartRange === '7' ? 'bg-white shadow text-slate-900' : 'text-slate-500'
-                  }`}
-                >
-                  7 Hari
-                </button>
-                <button
-                  onClick={() => setChartRange('30')}
-                  className={`px-2 py-0.5 rounded ${
-                    chartRange === '30' ? 'bg-white shadow text-slate-900' : 'text-slate-500'
-                  }`}
-                >
-                  30 Hari
-                </button>
-                <button
-                  onClick={() => setChartRange('1y')}
-                  className={`px-2 py-0.5 rounded ${
-                    chartRange === '1y' ? 'bg-white shadow text-slate-900' : 'text-slate-500'
-                  }`}
-                >
-                  1 Tahun
-                </button>
-              </div>
-            </div>
-
-            {/* Custom SVG Line Chart */}
-            <div className="h-52 w-full pt-4">
-              <svg viewBox="0 0 500 160" className="w-full h-full overflow-visible">
-                {/* Horizontal grid lines */}
-                <line x1="0" y1="30" x2="500" y2="30" stroke="#f1f5f9" strokeWidth="1" />
-                <line x1="0" y1="70" x2="500" y2="70" stroke="#f1f5f9" strokeWidth="1" />
-                <line x1="0" y1="110" x2="500" y2="110" stroke="#f1f5f9" strokeWidth="1" />
-                <line x1="0" y1="150" x2="500" y2="150" stroke="#e2e8f0" strokeWidth="1" />
-
-                {/* Curve 1: Penjualan Paket */}
-                <path
-                  d="M 20 130 Q 120 110 200 70 T 360 40 T 480 50"
-                  fill="none"
-                  stroke="#059669"
-                  strokeWidth="3.5"
-                  strokeLinecap="round"
-                />
-
-                {/* Curve 2: Akumulasi Setoran Masuk */}
-                <path
-                  d="M 20 145 Q 120 130 200 95 T 360 70 T 480 65"
-                  fill="none"
-                  stroke="#d97706"
-                  strokeWidth="2.5"
-                  strokeDasharray="4 4"
-                  strokeLinecap="round"
-                />
-
-                {/* Dots on Curve 1 */}
-                <circle cx="20" cy="130" r="4" fill="#059669" />
-                <circle cx="200" cy="70" r="4" fill="#059669" />
-                <circle cx="360" cy="40" r="4" fill="#059669" />
-                <circle cx="480" cy="50" r="5" fill="#059669" />
-
-                {/* Dots on Curve 2 */}
-                <circle cx="20" cy="145" r="3.5" fill="#d97706" />
-                <circle cx="200" cy="95" r="3.5" fill="#d97706" />
-                <circle cx="360" cy="70" r="3.5" fill="#d97706" />
-                <circle cx="480" cy="65" r="4" fill="#d97706" />
-              </svg>
-            </div>
-
-            <div className="flex flex-wrap items-center justify-between text-xs pt-2 border-t border-slate-100 text-slate-500">
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center space-x-1.5">
-                  <span className="w-3 h-3 rounded-full bg-emerald-600 inline-block" />
-                  <span>Penjualan Paket (Rp)</span>
-                </div>
-                <div className="flex items-center space-x-1.5">
-                  <span className="w-3 h-1 bg-amber-600 inline-block" />
-                  <span>Akumulasi Setoran Masuk</span>
-                </div>
-              </div>
-              <span className="text-[11px] text-slate-400">Update Real-Time 2026</span>
-            </div>
+          <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-3">
+            <h3 className="text-sm font-bold text-slate-900">Ringkasan Setoran Terverifikasi</h3>
+            <p className="text-2xl font-black text-emerald-700">Rp {verifiedTotal.toLocaleString('id-ID')}</p>
+            <p className="text-xs text-slate-500">Berdasarkan {verifiedTransactions.length} transaksi berstatus berhasil pada data akun ini. Grafik tren belum tersedia.</p>
           </div>
-
-          {/* Activities Card & Scan CTA */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex flex-col justify-between space-y-4">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-slate-900">Aktivitas Terbaru</h3>
-                <span className="text-[11px] text-blue-600 cursor-pointer font-semibold">
-                  Lihat Semua
-                </span>
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-3">
+            <h3 className="text-sm font-bold text-slate-900">Transaksi Terbaru</h3>
+            {recentTransactions.length ? recentTransactions.map((tx) => (
+              <div key={tx.id} className="border-b border-slate-100 pb-2 last:border-0">
+                <div className="flex items-center justify-between gap-2 text-xs"><strong className="text-slate-800">{tx.memberName}</strong><span className="text-slate-500">{tx.status}</span></div>
+                <p className="text-[11px] text-slate-500">Rp {tx.amount.toLocaleString('id-ID')} · {tx.invoiceNo} · {tx.date}</p>
               </div>
-
-              <div className="space-y-3 text-xs">
-                <div className="flex items-start space-x-2.5">
-                  <div className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg shrink-0 mt-0.5">
-                    <UserPlus className="w-3.5 h-3.5" />
-                  </div>
-                  <div>
-                    <span className="font-bold text-slate-900 block">Member baru mendaftar</span>
-                    <span className="text-slate-600">Siti Rahma mendaftar Paket Keluarga 2027</span>
-                    <span className="text-[10px] text-slate-400 block mt-0.5">12 Okt 2026, 14:31</span>
-                  </div>
-                </div>
-
-                <div className="flex items-start space-x-2.5">
-                  <div className="p-1.5 bg-blue-50 text-blue-600 rounded-lg shrink-0 mt-0.5">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                  </div>
-                  <div>
-                    <span className="font-bold text-slate-900 block">Setoran diverifikasi</span>
-                    <span className="text-slate-600">Setoran Rp 100.000 Siti Rahma telah divalidasi</span>
-                    <span className="text-[10px] text-slate-400 block mt-0.5">12 Okt 2026, 14:35</span>
-                  </div>
-                </div>
-
-                <div className="flex items-start space-x-2.5">
-                  <div className="p-1.5 bg-purple-50 text-purple-600 rounded-lg shrink-0 mt-0.5">
-                    <PackageCheck className="w-3.5 h-3.5" />
-                  </div>
-                  <div>
-                    <span className="font-bold text-slate-900 block">Paket lunas & siap ambil</span>
-                    <span className="text-slate-600">Asep Suwandi telah melunasi Paket Sembako</span>
-                    <span className="text-[10px] text-slate-400 block mt-0.5">14 Okt 2026, 11:20</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <button
-              onClick={onOpenScan}
-              className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center justify-center space-x-2"
-            >
-              <QrCode className="w-4 h-4 text-amber-400" />
-              <span>Scan Pengambilan Member</span>
-            </button>
+            )) : <p className="text-xs text-slate-500">Belum ada transaksi untuk agen ini.</p>}
           </div>
         </div>
 

@@ -18,6 +18,7 @@ import { CatalogManagerModal } from './components/CatalogManagerModal';
 import { SupabaseSchemaModal } from './components/SupabaseSchemaModal';
 import { ToastContainer } from './components/ToastContainer';
 import { AuthLoginModal } from './components/AuthLoginModal';
+import { AIChatWidget } from './components/AIChatWidget';
 import { safeFetchJson, safePostJson } from './utils/apiClient';
 
 export default function App() {
@@ -28,8 +29,8 @@ export default function App() {
   const [isGuideOpen, setIsGuideOpen] = useState<boolean>(false);
 
   // Dynamic application state
-  const [packages, setPackages] = useState<ParcelPackage[]>(PACKAGES);
-  const [agents, setAgents] = useState<Agent[]>(AGENTS);
+  const [packages, setPackages] = useState<ParcelPackage[]>(import.meta.env.DEV ? PACKAGES : []);
+  const [agents, setAgents] = useState<Agent[]>(import.meta.env.DEV ? AGENTS : []);
   const [members, setMembers] = useState<Member[]>(import.meta.env.DEV ? INITIAL_MEMBERS : []);
   const [transactions, setTransactions] = useState<Transaction[]>(import.meta.env.DEV ? INITIAL_TRANSACTIONS : []);
   const [adminAccounts, setAdminAccounts] = useState<AdminAccount[]>([]);
@@ -68,9 +69,10 @@ export default function App() {
   // Public catalog data loads without a session. Private records load only after server authentication.
   useEffect(() => {
     try { localStorage.removeItem('sp_admins'); } catch {}
-    safeFetchJson<ParcelPackage[]>('/api/packages', PACKAGES).then(setPackages);
-    safeFetchJson<Agent[]>('/api/agents', AGENTS).then(setAgents);
+    safeFetchJson<ParcelPackage[]>('/api/packages', import.meta.env.DEV ? PACKAGES : []).then(setPackages);
     safeFetchJson<{ user: AuthenticatedUser } | null>('/api/auth/me', null).then(async (session) => {
+      const visibleAgents = await safeFetchJson<Agent[]>('/api/agents', import.meta.env.DEV ? AGENTS : []);
+      setAgents(Array.isArray(visibleAgents) ? visibleAgents : []);
       if (!session?.user) return;
       await loadPrivateData(session.user.role);
       if (session.user.role === 'member') setSelectedMemberId(session.user.id);
@@ -94,60 +96,24 @@ export default function App() {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
-  // Simulate an incoming transaction in real-time
-  const handleSimulateIncomingTransaction = () => {
-    const randomMember = members[Math.floor(Math.random() * members.length)];
-    const amounts = [25000, 50000, 75000, 100000, 150000, 250000];
-    const amount = amounts[Math.floor(Math.random() * amounts.length)];
-    const methods: Transaction['method'][] = [
-      'Transfer Bank BCA',
-      'Transfer Bank BRI',
-      'QRIS Instant',
-      'Tunai Agen'
-    ];
-    const method = methods[Math.floor(Math.random() * methods.length)];
-    const randomInv = Math.floor(1000 + Math.random() * 9000);
-
-    const newTx: Transaction = {
-      id: `tx-sim-${Date.now()}`,
-      invoiceNo: `INV-20261026-${randomInv}`,
-      memberId: randomMember.id,
-      memberName: randomMember.name,
-      memberCode: randomMember.memberCode,
-      packageName: randomMember.packageName,
-      agentId: randomMember.agentId,
-      agentName: randomMember.agentName,
-      amount,
-      date: '26 Okt 2026',
-      method,
-      status: 'Menunggu',
-      notes: `Setoran via ${method}`
-    };
-
-    setTransactions((prev) => [newTx, ...prev]);
-
-    showToast({
-      title: '📥 Transaksi Baru Masuk!',
-      message: `Setoran sebesar Rp ${amount.toLocaleString('id-ID')} dari ${randomMember.name} (${newTx.invoiceNo}) berhasil dicatat. Status: Menunggu Verifikasi.`,
-      type: 'warning',
-      invoiceNo: newTx.invoiceNo,
-      amount
-    });
-  };
-
   // Deposit completed handler
-  const handleDepositComplete = (newTx: Transaction, amount: number) => {
-    setTransactions((prev) => [newTx, ...prev]);
-    // Keep the balance unchanged until an admin or Korwil approves the deposit.
-    safePostJson('/api/transactions', newTx);
+  const handleDepositComplete = async (newTx: Transaction, amount: number): Promise<Transaction | null> => {
+    const result = await safePostJson<Transaction>('/api/transactions', newTx);
+    if (!result.ok || !result.data?.id) {
+      showToast({ title: 'Setoran belum tersimpan', message: result.error || 'Periksa koneksi lalu coba lagi.', type: 'error' });
+      return null;
+    }
+    const savedTransaction = result.data;
+    setTransactions((prev) => [savedTransaction, ...prev]);
 
     showToast({
       title: '📥 Setoran Baru Berhasil Dicatat!',
-      message: `${newTx.memberName} berhasil menyetor Rp ${amount.toLocaleString('id-ID')} via ${newTx.method}. Menunggu approval Admin Pusat.`,
+      message: `Pengajuan setoran Rp ${amount.toLocaleString('id-ID')} tersimpan dan menunggu verifikasi. Saldo belum berubah.`,
       type: 'info',
-      invoiceNo: newTx.invoiceNo,
+      invoiceNo: savedTransaction.invoiceNo,
       amount
     });
+    return savedTransaction;
   };
 
   // Agent quick deposit for a member
@@ -156,7 +122,7 @@ export default function App() {
     setCurrentView('deposit');
   };
 
-  const approvePendingTransaction = (txId: string, notes?: string): Transaction | null => {
+  const approvePendingTransaction = async (txId: string, notes?: string): Promise<Transaction | null> => {
     const targetTx = transactions.find((t) => t.id === txId);
     if (!targetTx || targetTx.status !== 'Menunggu') return null;
 
@@ -166,10 +132,13 @@ export default function App() {
       ...(notes ? { notes } : {})
     };
 
-    setTransactions((prev) =>
-      prev.map((t) => (t.id === txId && t.status === 'Menunggu' ? approvedTx : t))
-    );
-    safePostJson('/api/transactions', approvedTx);
+    const result = await safePostJson<Transaction>('/api/transactions', approvedTx);
+    if (!result.ok || !result.data) {
+      showToast({ title: 'Verifikasi belum tersimpan', message: result.error || 'Periksa koneksi dan coba lagi.', type: 'error' });
+      return null;
+    }
+    const savedTx = result.data;
+    setTransactions((prev) => prev.map((t) => (t.id === txId && t.status === 'Menunggu' ? savedTx : t)));
 
     const targetMember = members.find((m) => m.id === targetTx.memberId);
     if (targetMember) {
@@ -183,20 +152,19 @@ export default function App() {
       };
 
       setMembers((prev) => prev.map((m) => (m.id === updatedMember.id ? updatedMember : m)));
-      safePostJson('/api/members', updatedMember);
     }
 
-    return approvedTx;
+    return savedTx;
   };
 
   // Admin approves transaction
-  const handleApproveTransaction = (txId: string) => {
-    const targetTx = approvePendingTransaction(txId);
+  const handleApproveTransaction = async (txId: string) => {
+    const targetTx = await approvePendingTransaction(txId);
     if (!targetTx) return;
 
     showToast({
       title: 'Transaksi Disetujui! ✅',
-      message: `Setoran ${targetTx?.invoiceNo || txId} (${targetTx?.memberName || 'Member'}) senilai Rp ${(targetTx?.amount || 0).toLocaleString('id-ID')} telah disahkan oleh Super Admin.`,
+      message: `Setoran ${targetTx.invoiceNo || txId} (${targetTx.memberName || 'Member'}) senilai Rp ${targetTx.amount.toLocaleString('id-ID')} telah disahkan.`,
       type: 'success',
       invoiceNo: targetTx?.invoiceNo,
       amount: targetTx?.amount
@@ -204,18 +172,16 @@ export default function App() {
   };
 
   // Admin rejects transaction
-  const handleRejectTransaction = (txId: string) => {
+  const handleRejectTransaction = async (txId: string) => {
     const targetTx = transactions.find((t) => t.id === txId);
     if (!targetTx || targetTx.status !== 'Menunggu') return;
 
-    setTransactions((prev) =>
-      prev.map((t) => {
-        if (t.id === txId && t.status === 'Menunggu') return { ...t, status: 'Ditolak' };
-        return t;
-      })
-    );
-
-    safePostJson('/api/transactions', { ...targetTx, status: 'Ditolak' });
+    const result = await safePostJson<Transaction>('/api/transactions', { ...targetTx, status: 'Ditolak' });
+    if (!result.ok || !result.data) {
+      showToast({ title: 'Penolakan belum tersimpan', message: result.error || 'Periksa koneksi dan coba lagi.', type: 'error' });
+      return;
+    }
+    setTransactions((prev) => prev.map((t) => t.id === txId ? result.data! : t));
 
     showToast({
       title: 'Transaksi Ditolak! ❌',
@@ -227,13 +193,13 @@ export default function App() {
   };
 
   // Korwil rapid verification
-  const handleVerifyKorwil = (txId: string) => {
-    const targetTx = approvePendingTransaction(txId, 'Diverifikasi langsung oleh Korwil Priangan Timur');
+  const handleVerifyKorwil = async (txId: string) => {
+    const targetTx = await approvePendingTransaction(txId, `Diverifikasi oleh Korwil ${authSession?.name || ''}`.trim());
     if (!targetTx) return;
 
     showToast({
       title: 'Verifikasi Kilat Korwil! ⚡',
-      message: `Setoran ${targetTx?.invoiceNo || txId} (${targetTx?.memberName || 'Member'}) dinyatakan valid oleh Korwil Priangan Timur.`,
+      message: `Setoran ${targetTx.invoiceNo || txId} (${targetTx.memberName || 'Member'}) telah diverifikasi oleh Korwil.`,
       type: 'success',
       invoiceNo: targetTx?.invoiceNo,
       amount: targetTx?.amount
@@ -286,12 +252,16 @@ export default function App() {
 
   // Register new agent
   const handleRegisterAgent = async (newAgent: Agent, password: string): Promise<Agent | null> => {
-    const result = await safePostJson<{ agent: Agent; user: AuthenticatedUser }>('/api/register/agent', { agent: newAgent, password });
-    if (!result.ok || !result.data?.agent || !result.data?.user) {
+    const result = await safePostJson<{ agent: Agent; user?: AuthenticatedUser; pending?: boolean }>('/api/register/agent', { agent: newAgent, password });
+    if (!result.ok || !result.data?.agent) {
       showToast({ title: 'Pendaftaran belum berhasil', message: result.error || 'Silakan coba lagi.', type: 'error' });
       return null;
     }
     const savedAgent = result.data.agent;
+    if (!result.data.user) {
+      showToast({ title: 'Pengajuan agen diterima', message: 'Akun menunggu pemeriksaan admin sebelum dapat digunakan untuk masuk.', type: 'info' });
+      return savedAgent;
+    }
     setAgents((prev) => [savedAgent, ...prev.filter((agent) => agent.id !== savedAgent.id)]);
     setSelectedAgentId(savedAgent.id);
     setAuthSession(result.data.user);
@@ -303,6 +273,16 @@ export default function App() {
       type: 'success'
     });
     return savedAgent;
+  };
+
+  const handleUpdateAgent = async (agent: Agent): Promise<void> => {
+    const result = await safePostJson<Agent>('/api/agents', agent);
+    if (!result.ok || !result.data) {
+      showToast({ title: 'Status agen belum berubah', message: result.error || 'Periksa koneksi lalu coba lagi.', type: 'error' });
+      return;
+    }
+    setAgents((prev) => prev.map((item) => item.id === result.data!.id ? result.data! : item));
+    showToast({ title: 'Status agen diperbarui', message: `${result.data.storeName}: ${result.data.status}.`, type: 'success' });
   };
 
   // Catalog update package
@@ -371,6 +351,8 @@ export default function App() {
 
   // Handle Login Success from AuthLoginModal
   const handleLoginSuccess = async (user: AuthenticatedUser) => {
+    const visibleAgents = await safeFetchJson<Agent[]>('/api/agents', []);
+    setAgents(Array.isArray(visibleAgents) ? visibleAgents : []);
     await loadPrivateData(user.role);
     if (user.role === 'member') setSelectedMemberId(user.id);
     if (user.role === 'agent') setSelectedAgentId(user.agentId || user.id);
@@ -484,11 +466,14 @@ export default function App() {
             />
           )}
 
+          {currentView === 'public' && !isLoginModalOpen && !isRegisterModalOpen && !isAgentRegModalOpen && <AIChatWidget />}
+
           {currentView === 'member' && (
             authSession?.role === 'member' ? (
               <MemberDashboard
                 member={activeMember}
                 transactions={transactions.filter((t) => t.memberId === activeMember.id)}
+                agentPhone={agents.find((agent) => agent.id === activeMember.agentId)?.phone}
                 onGoToDeposit={() => setCurrentView('deposit')}
                 onOpenQR={() => setQrMember(activeMember)}
                 onViewKuitansi={(tx) => setKuitansiTx(tx)}
@@ -534,6 +519,7 @@ export default function App() {
             authSession?.role === 'agent' ? (
               <AgentDashboard
                 members={members}
+                transactions={transactions}
                 agents={agents}
                 activeAgentId={selectedAgentId}
                 onSelectAgent={(id) => setSelectedAgentId(id)}
@@ -575,6 +561,9 @@ export default function App() {
             authSession?.role === 'korwil' ? (
               <KorwilDashboard
                 agents={agents}
+                members={members}
+                transactions={transactions}
+                name={authSession.name}
                 pendingTransactions={transactions.filter((t) => t.status === 'Menunggu')}
                 onVerifyKorwil={handleVerifyKorwil}
                 onOpenAgentRegister={() => setIsAgentRegModalOpen(true)}
@@ -615,9 +604,12 @@ export default function App() {
                 agents={agents}
                 members={members}
                 adminAccounts={adminAccounts}
+                adminRole={authSession.adminRole}
+                adminName={authSession.name}
                 onAddAdminAccount={handleAddAdminAccount}
                 onToggleAdminStatus={handleToggleAdminStatus}
                 onDeleteAdminAccount={handleDeleteAdminAccount}
+                onUpdateAgent={handleUpdateAgent}
                 onApproveTransaction={handleApproveTransaction}
                 onRejectTransaction={handleRejectTransaction}
                 onViewKuitansi={(tx) => setKuitansiTx(tx)}

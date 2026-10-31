@@ -4,10 +4,7 @@ import {
   CreditCard,
   QrCode,
   Store,
-  Upload,
   CheckCircle2,
-  AlertCircle,
-  Copy,
   ChevronRight,
   ArrowLeft,
   ShieldCheck
@@ -15,7 +12,7 @@ import {
 
 interface MemberDepositFlowProps {
   member: Member;
-  onDepositComplete: (newTx: Transaction, amount: number) => void;
+  onDepositComplete: (newTx: Transaction, amount: number) => Promise<Transaction | null>;
   onBackToDashboard: () => void;
 }
 
@@ -27,9 +24,7 @@ export const MemberDepositFlow: React.FC<MemberDepositFlowProps> = ({
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [amount, setAmount] = useState<number>(100000);
   const [customAmount, setCustomAmount] = useState<string>('');
-  const [method, setMethod] = useState<'Transfer Bank BRI' | 'Transfer Bank BCA' | 'QRIS Instant' | 'Tunai Agen'>('Transfer Bank BRI');
-  const [proofFileName, setProofFileName] = useState<string>('');
-  const [isCopied, setIsCopied] = useState<boolean>(false);
+  const [method, setMethod] = useState<'Transfer Bank BRI' | 'Transfer Bank BCA' | 'QRIS Instant' | 'Tunai Agen'>('Tunai Agen');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   const remaining = Math.max(0, member.packagePrice - member.totalSaved);
@@ -49,20 +44,13 @@ export const MemberDepositFlow: React.FC<MemberDepositFlowProps> = ({
     }
   };
 
-  const handleCopyAccount = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setIsCopied(true);
-    setTimeout(() => setIsCopied(false), 2000);
-  };
-
-  const handleSubmitDeposit = () => {
+  const handleSubmitDeposit = async () => {
     if (amount <= 0) return;
     setIsSubmitting(true);
 
     const now = new Date();
-    const dateFormatted = `${now.getDate()} Okt 2026`;
-    const randomInv = Math.floor(100 + Math.random() * 900);
-    const invoiceNo = `TRX-20261026-${randomInv}`;
+    const dateFormatted = now.toLocaleDateString('id-ID');
+    const invoiceNo = `DRAFT-${now.getTime()}`;
 
     const newTx: Transaction = {
       id: `tx-${Date.now()}`,
@@ -76,15 +64,13 @@ export const MemberDepositFlow: React.FC<MemberDepositFlowProps> = ({
       amount,
       method,
       date: dateFormatted,
-      status: method === 'QRIS Instant' ? 'Berhasil' : 'Menunggu',
+      status: 'Menunggu',
       notes: method === 'Tunai Agen' ? 'Setoran tunai ke outlet agen' : 'Setoran via transfer rekening'
     };
 
-    setTimeout(() => {
-      setIsSubmitting(false);
-      onDepositComplete(newTx, amount);
-      setStep(3);
-    }, 600);
+    const savedTransaction = await onDepositComplete(newTx, amount);
+    setIsSubmitting(false);
+    if (savedTransaction) setStep(3);
   };
 
   return (
@@ -229,48 +215,27 @@ export const MemberDepositFlow: React.FC<MemberDepositFlowProps> = ({
                 Pilih Metode Penyetoran:
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div
-                  onClick={() => setMethod('Transfer Bank BRI')}
-                  className={`p-3.5 rounded-xl border cursor-pointer transition flex items-center space-x-3 ${
-                    method === 'Transfer Bank BRI'
-                      ? 'border-purple-600 bg-purple-50/70 ring-2 ring-purple-500'
-                      : 'border-slate-200 hover:bg-slate-50'
-                  }`}
-                >
+                <div aria-disabled="true" className="p-3.5 rounded-xl border border-slate-200 opacity-50 flex items-center space-x-3 cursor-not-allowed">
                   <CreditCard className="w-5 h-5 text-blue-600" />
                   <div className="text-xs">
                     <div className="font-bold text-slate-800">Transfer Bank BRI</div>
-                    <div className="text-[11px] text-slate-500">Virtual Account / Rekening Pusat</div>
+                    <div className="text-[11px] text-slate-500">Belum tersedia</div>
                   </div>
                 </div>
 
-                <div
-                  onClick={() => setMethod('Transfer Bank BCA')}
-                  className={`p-3.5 rounded-xl border cursor-pointer transition flex items-center space-x-3 ${
-                    method === 'Transfer Bank BCA'
-                      ? 'border-purple-600 bg-purple-50/70 ring-2 ring-purple-500'
-                      : 'border-slate-200 hover:bg-slate-50'
-                  }`}
-                >
+                <div aria-disabled="true" className="p-3.5 rounded-xl border border-slate-200 opacity-50 flex items-center space-x-3 cursor-not-allowed">
                   <CreditCard className="w-5 h-5 text-indigo-600" />
                   <div className="text-xs">
                     <div className="font-bold text-slate-800">Transfer Bank BCA</div>
-                    <div className="text-[11px] text-slate-500">Virtual Account / Rekening Pusat</div>
+                    <div className="text-[11px] text-slate-500">Belum tersedia</div>
                   </div>
                 </div>
 
-                <div
-                  onClick={() => setMethod('QRIS Instant')}
-                  className={`p-3.5 rounded-xl border cursor-pointer transition flex items-center space-x-3 ${
-                    method === 'QRIS Instant'
-                      ? 'border-purple-600 bg-purple-50/70 ring-2 ring-purple-500'
-                      : 'border-slate-200 hover:bg-slate-50'
-                  }`}
-                >
+                <div aria-disabled="true" className="p-3.5 rounded-xl border border-slate-200 opacity-50 flex items-center space-x-3 cursor-not-allowed">
                   <QrCode className="w-5 h-5 text-purple-700" />
                   <div className="text-xs">
                     <div className="font-bold text-slate-800">QRIS Instant (GoPay/OVO/ShopeePay)</div>
-                    <div className="text-[11px] text-purple-800 font-medium">Verifikasi Otomatis Seketika</div>
+                    <div className="text-[11px] text-slate-500 font-medium">Belum tersedia</div>
                   </div>
                 </div>
 
@@ -298,7 +263,7 @@ export const MemberDepositFlow: React.FC<MemberDepositFlowProps> = ({
                 onClick={() => setStep(2)}
                 className="flex items-center space-x-2 px-6 py-2.5 bg-gradient-to-r from-purple-800 to-indigo-800 hover:from-purple-900 hover:to-indigo-900 disabled:bg-slate-300 text-white text-xs font-bold rounded-xl shadow transition cursor-pointer"
               >
-                <span>Lanjut ke Instruksi Pembayaran</span>
+                <span>Lanjut ke Setoran Tunai Agen</span>
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
@@ -324,64 +289,22 @@ export const MemberDepositFlow: React.FC<MemberDepositFlowProps> = ({
             {/* Method Details */}
             {method === 'Transfer Bank BRI' && (
               <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl space-y-3 text-xs">
-                <span className="font-bold text-blue-900 block">Rekening Resmi Operasional Sagitarius Parcel:</span>
-                <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-blue-200">
-                  <div>
-                    <span className="text-[11px] text-slate-400 block">Bank BRI (Kode: 002)</span>
-                    <span className="font-mono text-base font-bold text-slate-900">0124-01-002345-53-8</span>
-                    <span className="text-[11px] text-slate-600 block">a.n. YAYASAN / PT SAGITARIUS PARCEL AMANAH</span>
-                  </div>
-                  <button
-                    onClick={() => handleCopyAccount('0124-01-002345-53-8')}
-                    className="flex items-center space-x-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-[11px] font-semibold"
-                  >
-                    <Copy className="w-3.5 h-3.5" />
-                    <span>{isCopied ? 'Tersalin!' : 'Salin'}</span>
-                  </button>
-                </div>
+                <span className="font-bold text-blue-900 block">Transfer bank belum tersedia.</span>
+                <p className="text-blue-800">Jangan transfer ke nomor rekening dari pesan atau sumber lain. Gunakan setoran tunai kepada agen yang terdaftar atau hubungi hotline resmi.</p>
               </div>
             )}
 
             {method === 'Transfer Bank BCA' && (
               <div className="p-4 bg-indigo-50 border border-indigo-200 rounded-xl space-y-3 text-xs">
-                <span className="font-bold text-indigo-900 block">Rekening Resmi Operasional Sagitarius Parcel:</span>
-                <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-indigo-200">
-                  <div>
-                    <span className="text-[11px] text-slate-400 block">Bank BCA (Kode: 014)</span>
-                    <span className="font-mono text-base font-bold text-slate-900">774-098-1120</span>
-                    <span className="text-[11px] text-slate-600 block">a.n. SAGITARIUS PARCEL INDONESIA</span>
-                  </div>
-                  <button
-                    onClick={() => handleCopyAccount('774-098-1120')}
-                    className="flex items-center space-x-1 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-[11px] font-semibold"
-                  >
-                    <Copy className="w-3.5 h-3.5" />
-                    <span>{isCopied ? 'Tersalin!' : 'Salin'}</span>
-                  </button>
-                </div>
+                <span className="font-bold text-indigo-900 block">Transfer bank belum tersedia.</span>
+                <p className="text-indigo-800">Jangan transfer ke nomor rekening dari pesan atau sumber lain. Gunakan setoran tunai kepada agen yang terdaftar atau hubungi hotline resmi.</p>
               </div>
             )}
 
             {method === 'QRIS Instant' && (
               <div className="p-5 bg-emerald-50 border border-emerald-200 rounded-xl text-center space-y-3">
-                <span className="text-xs font-bold text-emerald-900 block">
-                  Scan QRIS Dinamis Menggunakan BCA Mobile, BRImo, GoPay, OVO, Dana, atau ShopeePay
-                </span>
-                <div className="w-44 h-44 bg-white p-2 mx-auto rounded-xl border-2 border-emerald-600 shadow-md flex items-center justify-center">
-                  <div className="grid grid-cols-5 gap-1 w-full h-full p-1 bg-slate-900 rounded-lg">
-                    {Array.from({ length: 25 }).map((_, i) => (
-                      <div
-                        key={i}
-                        className={`rounded-xs ${
-                          i % 2 === 0 || i % 3 === 0 ? 'bg-white' : 'bg-transparent'
-                        }`}
-                      />
-                    ))}
-                  </div>
-                </div>
-                <p className="text-[11px] text-emerald-800 font-mono">
-                  NMID: ID1020261026001 | Sagitarius Parcel
-                </p>
+                <span className="text-xs font-bold text-emerald-900 block">QRIS belum tersedia.</span>
+                <p className="text-[11px] text-emerald-800">Jangan gunakan QRIS dari tangkapan layar atau sumber yang tidak diverifikasi.</p>
               </div>
             )}
 
@@ -395,32 +318,6 @@ export const MemberDepositFlow: React.FC<MemberDepositFlowProps> = ({
                   Silakan datang langsung ke <strong>{member.agentName}</strong>. Tunjukkan nomor ID Member Anda (
                   <span className="font-mono font-bold text-slate-800">{member.memberCode}</span>) dan serahkan uang tunai sebesar <strong>Rp {amount.toLocaleString('id-ID')}</strong>. Agen akan menginput transaksi langsung ke sistem.
                 </p>
-              </div>
-            )}
-
-            {/* Proof of Transfer Upload */}
-            {method !== 'Tunai Agen' && (
-              <div className="space-y-2">
-                <label className="block text-xs font-bold text-slate-700">
-                  Upload Foto Struk / Screenshot Bukti Transfer (Opsional saat simulasi):
-                </label>
-                <div className="border-2 border-dashed border-slate-300 rounded-xl p-4 text-center hover:bg-slate-50 cursor-pointer transition">
-                  <Upload className="w-6 h-6 text-slate-400 mx-auto mb-1" />
-                  <p className="text-xs text-slate-600">
-                    {proofFileName ? (
-                      <span className="font-bold text-emerald-700">{proofFileName}</span>
-                    ) : (
-                      'Klik untuk simulasi upload struk transfer ATM / Mobile Banking'
-                    )}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setProofFileName('struk_transfer_bri_20261026.jpg')}
-                    className="mt-2 text-[11px] text-blue-600 hover:underline font-semibold"
-                  >
-                    + Pasang contoh file struk demo
-                  </button>
-                </div>
               </div>
             )}
 
@@ -454,7 +351,7 @@ export const MemberDepositFlow: React.FC<MemberDepositFlowProps> = ({
             </div>
             <h3 className="text-xl font-bold text-slate-800">Setoran Berhasil Diajukan!</h3>
             <p className="text-xs text-slate-600 max-w-md mx-auto leading-relaxed">
-              Setoran sebesar <strong>Rp {amount.toLocaleString('id-ID')}</strong> telah tercatat pada buku tabungan digital Anda. Saldo tabungan Anda otomatis bertambah dan status telah disinkronkan ke dashboard Korwil & Admin Pusat.
+              Setoran sebesar <strong>Rp {amount.toLocaleString('id-ID')}</strong> telah diajukan. Status akan tetap menunggu sampai tim memverifikasi pembayaran; saldo belum bertambah sebelum disetujui.
             </p>
 
             <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl max-w-sm mx-auto text-xs text-left space-y-1.5">
@@ -469,7 +366,7 @@ export const MemberDepositFlow: React.FC<MemberDepositFlowProps> = ({
               <div className="flex justify-between">
                 <span className="text-slate-500">Status Awal:</span>
                 <span className="font-bold text-purple-800">
-                  {method === 'QRIS Instant' ? 'Terverifikasi Seketika' : 'Menunggu Validasi Pusat'}
+                  Menunggu verifikasi
                 </span>
               </div>
             </div>

@@ -146,8 +146,8 @@ export const PreparationGuideModal: React.FC<PreparationGuideModalProps> = ({ on
                   </div>
                   <ul className="text-xs space-y-1.5 text-slate-600 list-disc list-inside">
                     <li>Kontrak awal (Lock Price) dengan distributor beras, minyak, sirup, kaleng wafer pada H-6 bulan.</li>
-                    <li>Vendor pengrajin kue kering higienis (P-IRT / Halal BPJPH) kapasitas ribuan toples.</li>
-                    <li>Gudang transit packing & armada logistik serentak H-14 hingga H-7 sebelum hari raya.</li>
+                    <li>Verifikasi produsen, label, sertifikasi, dan kapasitas produk sebelum dicantumkan ke katalog.</li>
+                    <li>Tetapkan jadwal gudang dan pengiriman bersama mitra sebelum menjanjikan tanggal distribusi.</li>
                   </ul>
                 </div>
 
@@ -158,10 +158,9 @@ export const PreparationGuideModal: React.FC<PreparationGuideModalProps> = ({ on
                   </div>
                   <ul className="text-xs space-y-1.5 text-slate-600 list-disc list-inside">
                     <li>Katalog paket lengkap dengan kalkulator cicilan mingguan / bulanan.</li>
-                    <li>Buku tabungan digital real-time & download bukti kuitansi resmi.</li>
-                    <li>Metode bayar beragam (QRIS Instant, Virtual Account BRI/BCA, Tunai Agen).</li>
-                    <li>Tiket serah terima QR Code anti-penipuan & scanner agen.</li>
-                    <li>Integrasi notifikasi WhatsApp Gateway otomatis saat setoran disetujui.</li>
+                    <li>Status tabungan diperbarui setelah petugas memverifikasi setoran.</li>
+                    <li>Setoran tunai melalui agen tersedia; transfer bank dan QRIS belum diaktifkan.</li>
+                    <li>Fitur QR pengambilan dan notifikasi WhatsApp otomatis belum tersedia.</li>
                   </ul>
                 </div>
               </div>
@@ -290,7 +289,7 @@ export const PreparationGuideModal: React.FC<PreparationGuideModalProps> = ({ on
                     Payment Gateway / Mutasi Otomatis
                   </strong>
                   <p className="text-slate-600">
-                    Integrasi payment gateway (Midtrans / Xendit / Tripay) untuk QRIS Dinamis dan Virtual Account bank, serta sistem upload bukti transfer manual untuk setoran agen.
+                    Belum tersedia. Metode pembayaran non-tunai dinonaktifkan sampai rekening resmi atau payment gateway terintegrasi dan dapat diverifikasi.
                   </p>
                 </div>
 
@@ -300,7 +299,7 @@ export const PreparationGuideModal: React.FC<PreparationGuideModalProps> = ({ on
                     WhatsApp Notification Gateway
                   </strong>
                   <p className="text-slate-600">
-                    Setiap kali setoran diverifikasi agen/admin, sistem otomatis mengirimkan pesan WhatsApp konfirmasi ke nomor HP member agar member merasa aman dan percaya.
+                    Belum tersedia. Status setoran dapat dilihat pada dashboard; hubungi petugas jika memerlukan konfirmasi.
                   </p>
                 </div>
 

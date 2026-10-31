@@ -111,17 +111,34 @@ app.post('/api/chat', async (req: Request, res: Response) => {
       `Informasi umum: PT. SAGITARIUS TRINUNGGAL KARYA; program tabungan parcel Idul Fitri; alamat Bantar Peundeuy RT. 006 RW. 001 Margajaya Mangunreja, Kab. Tasikmalaya, Jawa Barat 46462; hotline resmi 0813-2438-3479.`,
       `Katalog publik saat ini: ${JSON.stringify(publicCatalog)}`
     ].join('\n');
-    const client = new GoogleGenAI({ apiKey });
-    const response = await client.models.generateContent({
-      model: process.env.GEMINI_MODEL?.trim() || 'gemini-3.8-flash',
-      contents: messages.map(({ role, text }) => ({ role, parts: [{ text }] })),
-      config: { systemInstruction, maxOutputTokens: 400, temperature: 0.35 }
-    });
+    const client = new GoogleGenAI({ apiKey, httpOptions: { timeout: 10_000 } });
+    const contents = messages.map(({ role, text }) => ({ role, parts: [{ text }] }));
+    const config = { systemInstruction, maxOutputTokens: 400, temperature: 0.35 };
+    const primaryModel = process.env.GEMINI_MODEL?.trim() || 'gemini-3.6-flash';
+    const fallbackModel = process.env.GEMINI_FALLBACK_MODEL?.trim() || 'gemini-3.5-flash-lite';
+    let response;
+    try {
+      response = await client.models.generateContent({ model: primaryModel, contents, config });
+    } catch (error) {
+      const status = typeof error === 'object' && error !== null && 'status' in error
+        ? Number((error as { status?: unknown }).status)
+        : 0;
+      if (![429, 500, 503].includes(status) || fallbackModel === primaryModel) throw error;
+      console.warn(`[AI Chat] Model ${primaryModel} unavailable (${status}); trying ${fallbackModel}.`);
+      response = await client.models.generateContent({ model: fallbackModel, contents, config });
+    }
     const reply = response.text?.trim();
     if (!reply) { res.status(502).json({ error: 'Asisten belum mendapatkan jawaban. Silakan coba lagi.' }); return; }
     res.json({ reply: reply.slice(0, 2500) });
   } catch (error) {
+    const status = typeof error === 'object' && error !== null && 'status' in error
+      ? Number((error as { status?: unknown }).status)
+      : 0;
     console.error('[AI Chat] Permintaan gagal:', error);
+    if ([429, 500, 503].includes(status)) {
+      res.status(503).json({ error: 'Asisten sedang ramai. Silakan coba lagi sebentar atau hubungi tim kami.' });
+      return;
+    }
     res.status(502).json({ error: 'Asisten sedang mengalami gangguan. Silakan coba lagi atau hubungi tim kami.' });
   }
 });

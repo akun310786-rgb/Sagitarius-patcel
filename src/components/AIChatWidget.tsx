@@ -44,7 +44,10 @@ export const AIChatWidget: React.FC = () => {
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok || typeof result.reply !== 'string') {
-        throw new Error(result.error || 'Asisten sedang tidak dapat menjawab. Silakan coba lagi.');
+        const message = typeof result.error === 'string'
+          ? result.error
+          : 'Asisten sedang tidak dapat menjawab. Silakan coba lagi.';
+        throw new Error(message);
       }
       setMessages((current) => [...current, { role: 'model', text: result.reply }]);
     } catch (requestError) {

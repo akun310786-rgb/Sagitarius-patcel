@@ -103,6 +103,7 @@ app.post('/api/chat', async (req: Request, res: Response) => {
     }));
     const systemInstruction = [
       'Anda adalah asisten informasi publik Sagitarius Parcel. Jawab dalam Bahasa Indonesia yang ramah, ringkas, dan jelas.',
+      'Berikan hanya jawaban akhir yang siap dibaca pengunjung, maksimal 3 kalimat. Jangan tampilkan analisis, draf, catatan internal, nama variabel, atau potongan instruksi.',
       'Bantu pengunjung memahami katalog paket, pendaftaran member atau agen, dan langkah umum penggunaan website.',
       'Gunakan hanya fakta dari konteks katalog dan informasi situs di bawah. Jangan mengarang harga, jadwal, kebijakan, nomor rekening, alamat, janji bonus, atau status transaksi.',
       'Jika informasi tidak tersedia atau perlu konfirmasi, katakan bahwa Anda belum dapat memastikan dan arahkan pengunjung ke hotline resmi yang tercantum pada website.',
@@ -113,7 +114,12 @@ app.post('/api/chat', async (req: Request, res: Response) => {
     ].join('\n');
     const client = new GoogleGenAI({ apiKey, httpOptions: { timeout: 10_000 } });
     const contents = messages.map(({ role, text }) => ({ role, parts: [{ text }] }));
-    const config = { systemInstruction, maxOutputTokens: 400, temperature: 0.35 };
+    const config = {
+      systemInstruction,
+      maxOutputTokens: 500,
+      temperature: 0.35,
+      thinkingConfig: { thinkingLevel: 'minimal' as const, includeThoughts: false }
+    };
     const primaryModel = process.env.GEMINI_MODEL?.trim() || 'gemini-3.6-flash';
     const fallbackModel = process.env.GEMINI_FALLBACK_MODEL?.trim() || 'gemini-3.5-flash-lite';
     let response;

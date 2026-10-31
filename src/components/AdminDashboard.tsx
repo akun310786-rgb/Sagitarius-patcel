@@ -590,7 +590,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               <FileText className="w-3.5 h-3.5 text-emerald-600" />
                               <span>Kuitansi</span>
                             </button>
-                          )}
+                          ) : null}
                         </td>
                       </tr>
                     ))}

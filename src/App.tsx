@@ -29,8 +29,8 @@ export default function App() {
   const [isGuideOpen, setIsGuideOpen] = useState<boolean>(false);
 
   // Dynamic application state
-  const [packages, setPackages] = useState<ParcelPackage[]>(import.meta.env.DEV ? PACKAGES : []);
-  const [agents, setAgents] = useState<Agent[]>(import.meta.env.DEV ? AGENTS : []);
+  const [packages, setPackages] = useState<ParcelPackage[]>(PACKAGES);
+  const [agents, setAgents] = useState<Agent[]>(AGENTS);
   const [members, setMembers] = useState<Member[]>(import.meta.env.DEV ? INITIAL_MEMBERS : []);
   const [transactions, setTransactions] = useState<Transaction[]>(import.meta.env.DEV ? INITIAL_TRANSACTIONS : []);
   const [adminAccounts, setAdminAccounts] = useState<AdminAccount[]>([]);
@@ -69,9 +69,9 @@ export default function App() {
   // Public catalog data loads without a session. Private records load only after server authentication.
   useEffect(() => {
     try { localStorage.removeItem('sp_admins'); } catch {}
-    safeFetchJson<ParcelPackage[]>('/api/packages', import.meta.env.DEV ? PACKAGES : []).then(setPackages);
+    safeFetchJson<ParcelPackage[]>('/api/packages', PACKAGES).then(setPackages);
     safeFetchJson<{ user: AuthenticatedUser } | null>('/api/auth/me', null).then(async (session) => {
-      const visibleAgents = await safeFetchJson<Agent[]>('/api/agents', import.meta.env.DEV ? AGENTS : []);
+      const visibleAgents = await safeFetchJson<Agent[]>('/api/agents', AGENTS);
       setAgents(Array.isArray(visibleAgents) ? visibleAgents : []);
       if (!session?.user) return;
       await loadPrivateData(session.user.role);

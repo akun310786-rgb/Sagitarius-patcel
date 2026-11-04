@@ -78,7 +78,7 @@ Mengambil daftar semua paket lebaran.
     "thrBonus": "THR Rp 200.000",
     "bonusGift": "Travel Bag Eksklusif SP",
     "weight": "± 7.5 kg",
-    "imageUrl": "/src/assets/images/parcel_bunda_sembako_1793177821665.jpg",
+    "imageUrl": "/assets/images/parcel_bunda_sembako_1793177821665.jpg",
     "items": ["Travel Bag Eksklusif SP (Bonus)", "..."]
   }
 ]

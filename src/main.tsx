@@ -1,5 +1,16 @@
-import {createRoot} from 'react-dom/client';
+import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
+import { AuthProvider } from './contexts/AuthContext';
+import { AppDataProvider } from './contexts/AppDataContext';
+import { ToastProvider } from './contexts/ToastContext';
 
-createRoot(document.getElementById('root')!).render(<App />);
+createRoot(document.getElementById('root')!).render(
+  <AuthProvider>
+    <AppDataProvider initialRole="public">
+      <ToastProvider>
+        <App />
+      </ToastProvider>
+    </AppDataProvider>
+  </AuthProvider>
+);

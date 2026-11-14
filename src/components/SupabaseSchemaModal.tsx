@@ -19,6 +19,7 @@ interface SupabaseSchemaModalProps {
   agents: Agent[];
   members: Member[];
   transactions: Transaction[];
+  onRefresh?: () => Promise<void> | void;
   onClose: () => void;
 }
 
@@ -27,6 +28,7 @@ export const SupabaseSchemaModal: React.FC<SupabaseSchemaModalProps> = ({
   agents,
   members,
   transactions,
+  onRefresh,
   onClose
 }) => {
   const [selectedCollection, setSelectedCollection] = useState<'packages' | 'members' | 'agents' | 'transactions'>('packages');
@@ -34,14 +36,20 @@ export const SupabaseSchemaModal: React.FC<SupabaseSchemaModalProps> = ({
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [feedbackMessage, setFeedbackMessage] = useState<string>('');
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setIsRefreshing(true);
     setFeedbackMessage('Menyinkronkan data koleksi terbaru...');
-    setTimeout(() => {
-      setIsRefreshing(false);
+    try {
+      if (onRefresh) {
+        await onRefresh();
+      }
       setFeedbackMessage('✅ Data koleksi berhasil disegarkan.');
+    } catch {
+      setFeedbackMessage('⚠️ Data lokal aktif. Pastikan koneksi server stabil.');
+    } finally {
+      setIsRefreshing(false);
       setTimeout(() => setFeedbackMessage(''), 3000);
-    }, 600);
+    }
   };
 
   // Filter collections based on search query

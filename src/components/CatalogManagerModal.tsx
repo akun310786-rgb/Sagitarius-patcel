@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { ParcelPackage } from '../types/parcel';
+import { resolvePackageImage, handleImageError } from '../utils/imageUrl';
 import {
   X,
   Plus,
@@ -260,8 +261,9 @@ export const CatalogManagerModal: React.FC<CatalogManagerModalProps> = ({
                     }`}
                   >
                     <img
-                      src={pkg.imageUrl}
+                      src={resolvePackageImage(pkg.imageUrl, pkg.category)}
                       alt={pkg.name}
+                      onError={(e) => handleImageError(e, pkg.category)}
                       className="w-12 h-12 rounded-xl object-cover shrink-0"
                     />
                     <div className="text-xs flex-1 min-w-0">
@@ -516,13 +518,10 @@ export const CatalogManagerModal: React.FC<CatalogManagerModalProps> = ({
                     <div className="flex items-center gap-3.5 p-3 bg-white rounded-xl border border-slate-200 shadow-2xs">
                       <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden bg-slate-900 shrink-0 border border-slate-300 shadow-xs">
                         <img
-                          src={imageUrl}
+                          src={resolvePackageImage(imageUrl, category)}
                           alt="Preview Banner Paket"
                           className="w-full h-full object-cover"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src =
-                              'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=600&q=80';
-                          }}
+                          onError={(e) => handleImageError(e, category)}
                         />
                       </div>
                       <div className="min-w-0 flex-1">

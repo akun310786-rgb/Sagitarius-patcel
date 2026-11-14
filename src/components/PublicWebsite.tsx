@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ParcelPackage, Agent } from '../types/parcel';
 import { COMPANY_INFO, PAKET_UANG_DATA, BARANG_SATUAN_DATA } from '../data/mockData';
+import { resolvePackageImage, handleImageError } from '../utils/imageUrl';
 import heroLuxuryBg from '../assets/images/luxury_hero_bg_1793194496144.jpg';
 import {
   Package,
@@ -944,8 +945,9 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
                         {/* Left Side: Parcel Visual & Badges */}
                         <div className="lg:col-span-5 relative min-h-[260px] lg:min-h-full bg-slate-900 overflow-hidden group">
                           <img
-                            src={pkg.imageUrl}
+                            src={resolvePackageImage(pkg.imageUrl, pkg.category)}
                             alt={pkg.name}
+                            onError={(e) => handleImageError(e, pkg.category)}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-transparent to-black/30 pointer-events-none" />
@@ -1152,8 +1154,9 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
                               }`}
                             >
                               <img
-                                src={itemPkg.imageUrl}
+                                src={resolvePackageImage(itemPkg.imageUrl, itemPkg.category)}
                                 alt={itemPkg.name}
+                                onError={(e) => handleImageError(e, itemPkg.category)}
                                 className="w-10 h-10 rounded-lg object-cover border border-purple-200 shrink-0"
                               />
                               <div className="min-w-0 flex-1">
@@ -1186,8 +1189,9 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
                       {/* Image and Weight Badge */}
                       <div className="relative h-60 bg-slate-100 overflow-hidden group">
                         <img
-                          src={pkg.imageUrl}
+                          src={resolvePackageImage(pkg.imageUrl, pkg.category)}
                           alt={pkg.name}
+                          onError={(e) => handleImageError(e, pkg.category)}
                           className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
                         />
                         <div className="absolute top-3 left-3 bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 font-black text-[11px] tracking-wider uppercase px-3 py-1 rounded-lg shadow-md border border-amber-300">
@@ -1710,8 +1714,9 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
           <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-purple-100">
             <div className="relative h-56 bg-slate-100">
               <img
-                src={activePackageDetail.imageUrl}
+                src={resolvePackageImage(activePackageDetail.imageUrl, activePackageDetail.category)}
                 alt={activePackageDetail.name}
+                onError={(e) => handleImageError(e, activePackageDetail.category)}
                 className="w-full h-full object-cover"
               />
               <button

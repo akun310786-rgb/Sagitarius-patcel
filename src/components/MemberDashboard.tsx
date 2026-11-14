@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Member, Transaction, ParcelPackage } from '../types/parcel';
 import { PACKAGES } from '../data/mockData';
+import { resolvePackageImage, handleImageError } from '../utils/imageUrl';
 import {
   Wallet,
   Clock,
@@ -710,8 +711,9 @@ export const MemberDashboard: React.FC<MemberDashboardProps> = ({
 
               <div className="flex items-center space-x-3 bg-slate-50 p-3 rounded-xl border border-slate-100">
                 <img
-                  src={currentPkg.imageUrl}
+                  src={resolvePackageImage(currentPkg.imageUrl, currentPkg.category)}
                   alt={currentPkg.name}
+                  onError={(e) => handleImageError(e, currentPkg.category)}
                   className="w-16 h-16 rounded-lg object-cover shrink-0"
                 />
                 <div className="text-xs space-y-1">

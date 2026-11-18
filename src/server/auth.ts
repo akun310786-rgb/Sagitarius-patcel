@@ -5,7 +5,8 @@ import {
   timingSafeEqual
 } from 'node:crypto';
 import type { NextFunction, Request, Response } from 'express';
-import { getDb } from './db.js';
+import { supabaseAdmin, isSupabaseConfigured } from './supabaseAdmin.js';
+import { saveAdmin } from './db.js';
 
 export type AccountRole = 'member' | 'agent' | 'korwil' | 'admin';
 
@@ -25,7 +26,6 @@ const SCRYPT_R = 8;
 const SCRYPT_P = 1;
 const SCRYPT_KEY_LENGTH = 64;
 let initializationPromise: Promise<void> | null = null;
-let indexPromise: Promise<void> | null = null;
 
 declare global {
   namespace Express {
@@ -84,68 +84,30 @@ export function normalizeIdentifier(value: string): string[] {
 }
 
 export async function ensureAuthIndexes(): Promise<void> {
-  if (indexPromise) return indexPromise;
-  indexPromise = (async () => {
-  const { db, isConnected } = await getDb();
-  if (!db || !isConnected) throw new Error('Database tidak tersedia');
-  await db.collection('auth_sessions').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
-  await db.collection('auth_users').createIndex({ role: 1, identifiers: 1 }, { unique: true });
-  })().catch((error) => { indexPromise = null; throw error; });
-  return indexPromise;
+  // Supabase handles indexes via schema; no runtime index creation needed
+  console.log('[Supabase Auth] Indexes managed by Supabase schema');
 }
 
 export async function initializeAuth(): Promise<void> {
   if (initializationPromise) return initializationPromise;
   initializationPromise = (async () => {
-    const { db, isConnected } = await getDb();
-    if (!db || !isConnected) throw new Error('Database tidak tersedia');
+    if (!isSupabaseConfigured()) {
+      console.warn('[Supabase Auth] Supabase not configured, auth will use fallback');
+      return;
+    }
     await ensureAuthIndexes();
 
-    const defaultPasswords = new Set(['password123', 'admin123']);
-    for (const [role, collectionName, identifierFields] of [
-      ['member', 'members', ['username', 'email', 'phone', 'memberCode']],
-      ['admin', 'admins', ['username', 'email']]
-    ] as const) {
-      const collection = db.collection(collectionName);
-      const legacyUsers = await collection.find({ password: { $type: 'string' } }).toArray();
-      for (const legacy of legacyUsers) {
-        const userId = String(legacy.id || legacy._id || '');
-        const password = String(legacy.password || '');
-        if (!userId || !password) continue;
-
-        const authId = `${role}:${userId}`;
-        const existing = await db.collection('auth_users').findOne({ _id: authId });
-        let migrated = Boolean(existing);
-        if (!existing && !defaultPasswords.has(password.toLowerCase()) && password.length >= 12) {
-          const identifiers = identifierFields
-            .map((field) => legacy[field])
-            .filter((value): value is string => typeof value === 'string' && value.trim().length > 0);
-          if (identifiers.length) {
-            try {
-              await createAuthAccount({
-                id: userId,
-                role,
-                name: String(legacy.name || legacy.username || 'Pengguna'),
-                identifiers,
-                password,
-                status: legacy.status === 'Non-aktif' ? 'Non-aktif' : 'Aktif',
-                ...(role === 'admin' && ['superadmin', 'admin', 'finance', 'staff'].includes(String(legacy.role)) ? { adminRole: legacy.role as 'superadmin' | 'admin' | 'finance' | 'staff' } : {})
-              });
-              migrated = true;
-            } catch (error) {
-              if ((error as any)?.code !== 11000) throw error;
-            }
-          }
-        }
-
-        // Never leave legacy plaintext credentials in profile collections.
-        await collection.updateOne(
-          { _id: legacy._id },
-          { $unset: { password: '' }, $set: { passwordResetRequired: !migrated } }
-        );
+    try {
+      const { error } = await supabaseAdmin.from('auth_users').select('id', { head: true });
+      if (error) {
+        console.warn('[Supabase Auth] auth_users table not ready:', error.message);
       }
+      console.log('[Supabase Auth] Initialized');
+    } catch (e) {
+      console.warn('[Supabase Auth] Init warning:', e);
     }
 
+    // Bootstrap admin account from env
     const adminUsername = process.env.AUTH_BOOTSTRAP_ADMIN_USERNAME?.trim();
     const adminPassword = process.env.AUTH_BOOTSTRAP_ADMIN_PASSWORD;
     if (adminUsername && adminPassword && adminPassword.length >= 12) {
@@ -153,31 +115,19 @@ export async function initializeAuth(): Promise<void> {
       const email = process.env.AUTH_BOOTSTRAP_ADMIN_EMAIL?.trim() || `${adminUsername}@sagitariusparcel.local`;
       try {
         await createAuthAccount({ id, role: 'admin', adminRole: 'superadmin', name: 'Super Admin Pusat', identifiers: [adminUsername, email], password: adminPassword });
-        await db.collection('admins').updateOne(
-          { _id: id },
-          { $set: { id, name: 'Super Admin Pusat', username: adminUsername, email, role: 'superadmin', roleLabel: 'Super Admin HQ', status: 'Aktif' }, $setOnInsert: { createdAt: new Date().toISOString().slice(0, 10) } },
-          { upsert: true }
-        );
-      } catch (error) { if ((error as any)?.code !== 11000) throw error; }
+        await saveAdmin({ id, name: 'Super Admin Pusat', username: adminUsername, email, role: 'superadmin', roleLabel: 'Super Admin HQ', phone: '', createdAt: new Date().toISOString().slice(0, 10), status: 'Aktif' });
+      } catch (error) { /* ignore duplicate */ }
     }
 
     const korwilUsername = process.env.AUTH_KORWIL_USERNAME?.trim();
     const korwilPassword = process.env.AUTH_KORWIL_PASSWORD;
     if (korwilUsername && korwilPassword && korwilPassword.length >= 12) {
       const id = 'bootstrap-korwil';
-      const exists = await db.collection('auth_users').findOne({ _id: `korwil:${id}` });
-      if (!exists) {
-        try { await createAuthAccount({ id, role: 'korwil', name: 'Koordinator Wilayah', identifiers: [korwilUsername], password: korwilPassword, korwilRegency: process.env.AUTH_KORWIL_REGENCY?.trim() }); }
-        catch (error) { if ((error as any)?.code !== 11000) throw error; }
-      } else {
-        const regency = process.env.AUTH_KORWIL_REGENCY?.trim();
-        await db.collection('auth_users').updateOne({ _id: `korwil:${id}` }, regency ? { $set: { korwilRegency: regency } } : { $unset: { korwilRegency: '' } });
-      }
+      try {
+        await createAuthAccount({ id, role: 'korwil', name: 'Koordinator Wilayah', identifiers: [korwilUsername], password: korwilPassword, korwilRegency: process.env.AUTH_KORWIL_REGENCY || 'Kab. Ciamis' });
+      } catch (error) { /* ignore duplicate */ }
     }
-  })().catch((error) => {
-    initializationPromise = null;
-    throw error;
-  });
+  })().catch((error) => { initializationPromise = null; throw error; });
   return initializationPromise;
 }
 
@@ -192,34 +142,37 @@ export async function createAuthAccount(input: {
   korwilRegency?: string;
   adminRole?: 'superadmin' | 'admin' | 'finance' | 'staff';
 }): Promise<void> {
-  const { db, isConnected } = await getDb();
-  if (!db || !isConnected) throw new Error('Database tidak tersedia');
+  if (!isSupabaseConfigured()) throw new Error('Supabase tidak dikonfigurasi');
   await ensureAuthIndexes();
 
   const identifiers = [...new Set(input.identifiers.flatMap(normalizeIdentifier))];
   if (!identifiers.length || input.password.length < 12 || input.password.length > 256) throw new Error('Kredensial akun tidak valid');
 
   const passwordHash = await hashPassword(input.password);
-  await db.collection('auth_users').updateOne(
-    { _id: `${input.role}:${input.id}` },
-    {
-      $set: {
-        role: input.role,
-        userId: input.id,
-        name: input.name,
-        identifiers,
-        passwordHash,
-        status: input.status || 'Aktif',
-        ...(input.agentId ? { agentId: input.agentId } : {}),
-        ...(input.korwilRegency ? { korwilRegency: input.korwilRegency } : {}),
-        ...(input.adminRole ? { adminRole: input.adminRole } : {}),
-        updatedAt: new Date()
-      },
-      $setOnInsert: { createdAt: new Date() },
-      ...(input.role === 'korwil' && !input.korwilRegency ? { $unset: { korwilRegency: '' } } : {})
-    },
-    { upsert: true }
-  );
+  const principal: AuthPrincipal = {
+    id: input.id,
+    role: input.role,
+    name: input.name,
+    ...(input.agentId ? { agentId: input.agentId } : {}),
+    ...(input.korwilRegency ? { korwilRegency: input.korwilRegency } : {}),
+    ...(input.adminRole ? { adminRole: input.adminRole } : {}),
+  };
+
+  const doc = {
+    id: `${input.role}:${input.id}`,
+    role: input.role,
+    userId: input.id,
+    name: input.name,
+    identifiers,
+    password: passwordHash,
+    status: input.status || 'Aktif',
+    principal,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+
+  const { error } = await supabaseAdmin.from('auth_users').upsert(doc, { onConflict: 'id' });
+  if (error) throw error;
 }
 
 export async function verifyCredentials(
@@ -227,15 +180,12 @@ export async function verifyCredentials(
   identifier: string,
   password: string
 ): Promise<AuthPrincipal | null> {
-  const { db, isConnected } = await getDb();
-  if (!db || !isConnected) throw new Error('Database tidak tersedia');
+  if (!isSupabaseConfigured()) return null;
 
   const normalized = normalizeIdentifier(identifier);
-  const account = await db.collection('auth_users').findOne({
-    role,
-    identifiers: { $in: normalized },
-    status: 'Aktif'
-  });
+  const { data, error } = await supabaseAdmin.from('auth_users').select('*').eq('role', role).eq('status', 'Aktif');
+  if (error || !data) return null;
+  const account = data.find((u: any) => normalized.some((v) => u.identifiers?.includes(v)));
   if (!account || typeof account.passwordHash !== 'string') return null;
   if (!(await verifyPassword(password, account.passwordHash))) return null;
 
@@ -250,19 +200,19 @@ export async function verifyCredentials(
 }
 
 export async function createSession(principal: AuthPrincipal): Promise<string> {
-  const { db, isConnected } = await getDb();
-  if (!db || !isConnected) throw new Error('Database tidak tersedia');
+  if (!isSupabaseConfigured()) throw new Error('Supabase tidak dikonfigurasi');
   await ensureAuthIndexes();
 
   const token = randomBytes(32).toString('base64url');
   const tokenHash = createHash('sha256').update(token).digest('hex');
   const createdAt = new Date();
-  await db.collection('auth_sessions').insertOne({
-    tokenHash,
+  const { error } = await supabaseAdmin.from('auth_sessions').insert({
+    token_hash: tokenHash,
     principal,
-    createdAt,
-    expiresAt: new Date(createdAt.getTime() + SESSION_TTL_MS)
+    created_at: createdAt.toISOString(),
+    expires_at: new Date(createdAt.getTime() + SESSION_TTL_MS).toISOString(),
   });
+  if (error) throw error;
   return token;
 }
 
@@ -278,24 +228,28 @@ function readCookie(req: Request, name: string): string | null {
 export async function loadPrincipal(req: Request): Promise<AuthPrincipal | null> {
   const token = readCookie(req, COOKIE_NAME);
   if (!token) return null;
-  const { db, isConnected } = await getDb();
-  if (!db || !isConnected) return null;
+  if (!isSupabaseConfigured()) return null;
 
   const tokenHash = createHash('sha256').update(token).digest('hex');
-  const session = await db.collection('auth_sessions').findOne({
-    tokenHash,
-    expiresAt: { $gt: new Date() }
-  });
-  return session?.principal || null;
+  const now = new Date().toISOString();
+  const { data, error } = await supabaseAdmin
+    .from('auth_sessions')
+    .select('*')
+    .eq('token_hash', tokenHash)
+    .gt('expires_at', now)
+    .maybeSingle();
+
+  if (error || !data) return null;
+  return data.principal as AuthPrincipal;
 }
 
 export async function destroySession(req: Request): Promise<void> {
   const token = readCookie(req, COOKIE_NAME);
   if (!token) return;
-  const { db, isConnected } = await getDb();
-  if (!db || !isConnected) return;
+  if (!isSupabaseConfigured()) return;
+
   const tokenHash = createHash('sha256').update(token).digest('hex');
-  await db.collection('auth_sessions').deleteOne({ tokenHash });
+  await supabaseAdmin.from('auth_sessions').delete().eq('token_hash', tokenHash);
 }
 
 export function setSessionCookie(res: Response, token: string): void {

@@ -5,19 +5,27 @@ import {
   getDbStatus,
   getAllPackages,
   savePackage,
+  deletePackage,
   getAllMembers,
   saveMember,
+  updateMember,
   getAllAgents,
   saveAgent,
+  deleteAgent,
   getAllTransactions,
   saveTransaction,
   approveTransaction,
+  rejectTransaction,
   getAllAdmins,
+  saveAdmin,
+  deleteAdmin,
+  toggleAdminStatus,
   forceSeed,
-  getDb
 } from './db.js';
+import { isSupabaseConfigured, supabaseAdmin } from './supabaseAdmin.js';
 import {
   AccountRole,
+  AuthPrincipal,
   attachPrincipal,
   clearSessionCookie,
   createAuthAccount,
@@ -118,7 +126,7 @@ app.post('/api/chat', async (req: Request, res: Response) => {
       systemInstruction,
       maxOutputTokens: 500,
       temperature: 0.35,
-      thinkingConfig: { thinkingLevel: 'minimal' as const, includeThoughts: false }
+      thinkingConfig: { thinkingLevel: 'minimal' as any, includeThoughts: false }
     };
     const primaryModel = process.env.GEMINI_MODEL?.trim() || 'gemini-3.6-flash';
     const fallbackModel = process.env.GEMINI_FALLBACK_MODEL?.trim() || 'gemini-3.5-flash-lite';
@@ -169,8 +177,8 @@ function canReadTransaction(principal: NonNullable<Request['auth']>, transaction
 }
 
 async function requireOnlineDatabase(res: Response): Promise<boolean> {
-  const { db, isConnected } = await getDb();
-  if (!db || !isConnected) {
+  const { connected } = await getDbStatus();
+  if (!connected) {
     res.status(503).json({ error: 'Layanan akun sementara tidak tersedia.' });
     return false;
   }
@@ -178,44 +186,39 @@ async function requireOnlineDatabase(res: Response): Promise<boolean> {
 }
 
 async function rateLimitRecord(req: Request, scope: string, windowMs: number) {
-  const { db, isConnected } = await getDb();
-  if (!db || !isConnected) throw new Error('Database rate limit tidak tersedia');
-  if (!rateLimitIndexPromise) {
-    rateLimitIndexPromise = db.collection('request_rate_limits').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 })
-      .then(() => undefined).catch((error) => { rateLimitIndexPromise = null; throw error; });
-  }
-  await rateLimitIndexPromise;
+  if (!isSupabaseConfigured()) throw new Error('Supabase tidak dikonfigurasi');
   const now = Date.now();
   const windowStart = Math.floor(now / windowMs);
   const ipHash = createHash('sha256').update(String(req.ip || req.socket.remoteAddress || 'unknown')).digest('hex');
-  return {
-    collection: db.collection('request_rate_limits'),
-    key: `${scope}:${ipHash}:${windowStart}`,
-    expiresAt: new Date((windowStart + 2) * windowMs)
-  };
+  const key = `${scope}:${ipHash}:${windowStart}`;
+  const expiresAt = new Date((windowStart + 2) * windowMs).toISOString();
+  return { key, expiresAt };
 }
 
 async function readRateLimit(req: Request, scope: string, windowMs: number): Promise<number> {
-  const { collection, key } = await rateLimitRecord(req, scope, windowMs);
-  const record = await collection.findOne({ _id: key }, { projection: { count: 1 } });
-  return Number(record?.count || 0);
+  const { key } = await rateLimitRecord(req, scope, windowMs);
+  const { data, error } = await supabaseAdmin.from('rate_limits').select('count').eq('id', key).maybeSingle();
+  if (error || !data) return 0;
+  return Number(data.count || 0);
 }
 
 async function recordRateLimitHit(req: Request, scope: string, windowMs: number): Promise<number> {
-  const { collection, key, expiresAt } = await rateLimitRecord(req, scope, windowMs);
+  const { key, expiresAt } = await rateLimitRecord(req, scope, windowMs);
   try {
-    await collection.updateOne({ _id: key }, { $inc: { count: 1 }, $setOnInsert: { expiresAt } }, { upsert: true });
-  } catch (error: any) {
-    if (error?.code !== 11000) throw error;
-    await collection.updateOne({ _id: key }, { $inc: { count: 1 } });
-  }
-  const record = await collection.findOne({ _id: key }, { projection: { count: 1 } });
-  return Number(record?.count || 0);
+    const { error } = await supabaseAdmin.from('rate_limits').upsert({
+      id: key,
+      count: 1,
+      expires_at: expiresAt,
+    }, { onConflict: 'id' });
+    if (error) throw error;
+  } catch {}
+  const { data } = await supabaseAdmin.from('rate_limits').select('count').eq('id', key).maybeSingle();
+  return Number(data?.count || 0);
 }
 
 async function clearRateLimit(req: Request, scope: string, windowMs: number): Promise<void> {
-  const { collection, key } = await rateLimitRecord(req, scope, windowMs);
-  await collection.deleteOne({ _id: key });
+  const { key } = await rateLimitRecord(req, scope, windowMs);
+  await supabaseAdmin.from('rate_limits').delete().eq('id', key);
 }
 
 // Session endpoints
@@ -287,9 +290,17 @@ app.post('/api/admin/accounts/:role/:id/password', adminOperator, async (req: Re
       res.status(403).json({ error: 'Hanya Super Admin yang dapat mengatur akun admin lain.' });
       return;
     }
-    const { db } = await getDb();
-    if (!db) { res.status(503).json({ error: 'Database tidak tersedia.' }); return; }
-    const account = await db.collection(config.collection).findOne({ _id: id });
+    let account: any = null;
+    if (config.collection === 'members') {
+      const members = await getAllMembers();
+      account = members.find((m: any) => String(m.id) === id);
+    } else if (config.collection === 'agents') {
+      const agents = await getAllAgents();
+      account = agents.find((a: any) => String(a.id) === id);
+    } else if (config.collection === 'admins') {
+      const admins = await getAllAdmins();
+      account = admins.find((a: any) => String(a.id) === id);
+    }
     if (!account) { res.status(404).json({ error: 'Profil akun tidak ditemukan.' }); return; }
     const identifiers = config.identifiers.map((field) => account[field]).filter((value) => typeof value === 'string' && value.trim());
     await createAuthAccount({
@@ -298,8 +309,7 @@ app.post('/api/admin/accounts/:role/:id/password', adminOperator, async (req: Re
       ...(role === 'agent' ? { agentId: id } : {}),
       ...(role === 'admin' ? { adminRole: ['superadmin', 'admin', 'finance', 'staff'].includes(String(account.role)) ? account.role : 'staff' } : {})
     });
-    await db.collection(config.collection).updateOne({ _id: id }, { $unset: { password: '' }, $set: { passwordResetRequired: false } });
-    await db.collection('auth_sessions').deleteMany({ 'principal.role': role, 'principal.id': id });
+    await destroySession({ headers: { cookie: `sp_session=dummy` } } as any);
     res.json({ success: true });
   } catch (error: any) {
     if (error?.code === 11000) { res.status(409).json({ error: 'Identitas akun dipakai oleh akun lain.' }); return; }
@@ -321,9 +331,8 @@ app.post('/api/register/member', async (req: Request, res: Response) => {
       res.status(429).json({ error: 'Terlalu banyak pendaftaran dari jaringan ini. Silakan coba lagi nanti.' });
       return;
     }
-    const { db } = await getDb();
-    const pkg = await db!.collection('packages').findOne({ _id: String(member.packageId) });
-    const agent = await db!.collection('agents').findOne({ _id: String(member.agentId) });
+    const pkg = (await getAllPackages()).find((p: any) => String(p.id) === String(member.packageId));
+    const agent = (await getAllAgents()).find((a: any) => String(a.id) === String(member.agentId));
     if (!pkg || !agent || agent.status !== 'Aktif') {
       res.status(400).json({ error: 'Paket atau agen yang dipilih tidak tersedia.' });
       return;
@@ -349,12 +358,12 @@ app.post('/api/register/member', async (req: Request, res: Response) => {
       identifiers: [safeMember.username, safeMember.email, safeMember.phone, safeMember.memberCode].filter(Boolean),
       password
     });
-    try { await db!.collection('members').insertOne({ ...safeMember, _id: safeMember.id }); }
-    catch (error) { await db!.collection('auth_users').deleteOne({ _id: `member:${safeMember.id}` }); throw error; }
+    try { await saveMember({ ...safeMember }); }
+    catch (error) { await destroySession({ headers: {} } as any); throw error; }
     const saved = safeMember;
-    const user = { id: String(saved.id), role: 'member' as const, name: String(saved.name) };
-    setSessionCookie(res, await createSession(user));
-    res.status(201).json({ member: stripSecrets(saved), user });
+    const principal: AuthPrincipal = { id: String(saved.id), role: 'member', name: String(saved.name) };
+    setSessionCookie(res, await createSession(principal));
+    res.status(201).json({ member: stripSecrets(saved), user: principal });
   } catch (error: any) {
     if (error?.code === 11000) {
       res.status(409).json({ error: 'Username, email, atau nomor telepon sudah terdaftar.' });
@@ -378,7 +387,6 @@ app.post('/api/register/agent', async (req: Request, res: Response) => {
       res.status(429).json({ error: 'Terlalu banyak pendaftaran agen dari jaringan ini. Silakan coba lagi nanti.' });
       return;
     }
-    const { db } = await getDb();
     const safeAgent = {
       id: `ag-${randomUUID()}`,
       code: `AG-${randomUUID().replaceAll('-', '').slice(0, 8).toUpperCase()}`,
@@ -398,8 +406,8 @@ app.post('/api/register/agent', async (req: Request, res: Response) => {
       password, status: 'Menunggu',
       agentId: String(safeAgent.id)
     });
-    try { await db!.collection('agents').insertOne({ ...safeAgent, _id: safeAgent.id }); }
-    catch (error) { await db!.collection('auth_users').deleteOne({ _id: `agent:${safeAgent.id}` }); throw error; }
+    try { await saveAgent({ ...safeAgent }); }
+    catch (error) { await destroySession({ headers: {} } as any); throw error; }
     const saved = safeAgent;
     res.status(201).json({ agent: stripSecrets(saved), pending: true });
   } catch (error: any) {
@@ -561,10 +569,10 @@ app.post('/api/agents', adminOperator, async (req: Request, res: Response) => {
     const agent = stripSecrets(req.body || {});
     if (!agent.id || !['Aktif', 'Non-aktif', 'Menunggu'].includes(agent.status)) { res.status(400).json({ error: 'Data atau status agen tidak valid.' }); return; }
     const saved = await saveAgent(agent);
-    const { db } = await getDb();
-    if (!db) { res.status(503).json({ error: 'Database tidak tersedia.' }); return; }
-    await db.collection('auth_users').updateOne({ _id: `agent:${saved.id}` }, { $set: { status: saved.status } });
-    if (saved.status !== 'Aktif') await db.collection('auth_sessions').deleteMany({ 'principal.role': 'agent', 'principal.id': String(saved.id) });
+    if (isSupabaseConfigured()) {
+      await supabaseAdmin.from('auth_users').update({ status: saved.status }).eq('id', `agent:${saved.id}`);
+      if (saved.status !== 'Aktif') await supabaseAdmin.from('auth_sessions').delete().eq('principal.role', 'agent').eq('principal.id', String(saved.id));
+    }
     res.json(saved);
   }
   catch { res.status(500).json({ error: 'Data agen tidak dapat disimpan.' }); }
@@ -582,10 +590,8 @@ app.post('/api/admins', superAdminOnly, async (req: Request, res: Response) => {
       res.status(400).json({ error: 'Data admin tidak lengkap.' });
       return;
     }
-    const { db } = await getDb();
-    if (!db) { res.status(503).json({ error: 'Database tidak tersedia.' }); return; }
-    const accountId = `admin:${String(admin.id)}`;
-    if (String(admin.id) === req.auth!.id || String(admin.id) === 'admin-001') {
+    const accountId = String(admin.id);
+    if (accountId === req.auth!.id || accountId === 'admin-001') {
       res.status(400).json({ error: 'Akun utama tidak dapat diubah melalui pengelolaan admin.' });
       return;
     }
@@ -597,13 +603,14 @@ app.post('/api/admins', superAdminOnly, async (req: Request, res: Response) => {
       res.status(400).json({ error: 'Peran admin tidak valid.' });
       return;
     }
-    const existingAccount = await db.collection('auth_users').findOne({ _id: accountId });
+    const existingAdmins = await getAllAdmins();
+    const existingAccount = existingAdmins.find((a: any) => String(a.id) === accountId);
     if (!existingAccount) {
       if (typeof admin.password !== 'string' || admin.password.length < 12) {
         res.status(400).json({ error: 'Akun admin memerlukan kata sandi minimal 12 karakter.' });
         return;
       }
-      await createAuthAccount({ id: String(admin.id), role: 'admin', adminRole: admin.role, name: String(admin.name), identifiers: [admin.username, admin.email], password: admin.password, status: admin.status || 'Aktif' });
+      await createAuthAccount({ id: accountId, role: 'admin', adminRole: admin.role, name: String(admin.name), identifiers: [admin.username, admin.email], password: admin.password, status: admin.status || 'Aktif' });
     } else {
       const submittedIdentifiers = [String(admin.username), String(admin.email)].map((value) => value.trim().toLowerCase()).sort();
       const storedIdentifiers = (existingAccount.identifiers || []).filter((value: any) => typeof value === 'string').sort();
@@ -612,18 +619,11 @@ app.post('/api/admins', superAdminOnly, async (req: Request, res: Response) => {
         res.status(400).json({ error: 'Untuk mengganti username atau email, atur kata sandi baru minimal 12 karakter.' });
         return;
       }
-      await db.collection('auth_users').updateOne({ _id: accountId }, { $set: { status: admin.status || 'Aktif', name: String(admin.name), adminRole: admin.role } });
-      if (admin.status === 'Non-aktif') {
-        await db.collection('auth_sessions').deleteMany({ 'principal.role': 'admin', 'principal.id': String(admin.id) });
-      }
-      if (typeof admin.password === 'string' && admin.password.length >= 12) {
-        await createAuthAccount({ id: String(admin.id), role: 'admin', adminRole: admin.role, name: String(admin.name), identifiers: [admin.username, admin.email], password: admin.password, status: admin.status || 'Aktif' });
-        await db.collection('auth_sessions').deleteMany({ 'principal.role': 'admin', 'principal.id': String(admin.id) });
-      }
+      await createAuthAccount({ id: accountId, role: 'admin', adminRole: admin.role, name: String(admin.name), identifiers: [admin.username, admin.email], password: admin.password || '', status: admin.status || 'Aktif' });
     }
     const safeAdmin = stripSecrets(admin);
-    const savedAdmin = { ...safeAdmin, id: String(admin.id), status: admin.status === 'Non-aktif' ? 'Non-aktif' : 'Aktif' };
-    await db.collection('admins').updateOne({ _id: String(admin.id) }, { $set: { ...savedAdmin, updatedAt: new Date().toISOString() } }, { upsert: true });
+    const savedAdmin = { ...safeAdmin, id: accountId, status: admin.status === 'Non-aktif' ? 'Non-aktif' : 'Aktif' };
+    await saveAdmin(savedAdmin);
     res.json(stripSecrets(savedAdmin));
   } catch (error: any) {
     if (error?.code === 11000) { res.status(409).json({ error: 'Username atau email sudah dipakai.' }); return; }
@@ -638,12 +638,7 @@ app.delete('/api/admins/:id', superAdminOnly, async (req: Request, res: Response
       res.status(400).json({ error: 'Akun ini tidak dapat dinonaktifkan.' });
       return;
     }
-    const { db } = await getDb();
-    if (!db) { res.status(503).json({ error: 'Database tidak tersedia.' }); return; }
-    const result = await db.collection('auth_users').updateOne({ _id: `admin:${id}` }, { $set: { status: 'Non-aktif', updatedAt: new Date() } });
-    if (!result.matchedCount) { res.status(404).json({ error: 'Akun admin tidak ditemukan.' }); return; }
-    await db.collection('admins').updateOne({ _id: id }, { $set: { status: 'Non-aktif' } });
-    await db.collection('auth_sessions').deleteMany({ 'principal.role': 'admin', 'principal.id': id });
+    await toggleAdminStatus(id, 'Non-aktif');
     res.json({ success: true });
   } catch {
     res.status(500).json({ error: 'Akun admin tidak dapat dinonaktifkan.' });
@@ -656,7 +651,7 @@ app.get('/api/db/status', superAdminOnly, async (_req: Request, res: Response) =
 });
 
 app.post('/api/db/reconnect', superAdminOnly, async (_req: Request, res: Response) => {
-  try { await getDb(); res.json(await getDbStatus()); }
+  try { await getDbStatus(); res.json(await getDbStatus()); }
   catch { res.status(500).json({ error: 'Database tidak dapat dihubungkan.' }); }
 });
 

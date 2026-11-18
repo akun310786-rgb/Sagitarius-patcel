@@ -34,7 +34,7 @@ interface AppDataContextType {
 
 const AppDataContext = createContext<AppDataContextType | undefined>(undefined);
 
-export const AppDataProvider: React.FC<{ children: ReactNode }> = ({
+export const AppDataProvider: React.FC<{ children: ReactNode; initialRole?: string }> = ({
   children,
   initialRole = 'public',
 }) => {

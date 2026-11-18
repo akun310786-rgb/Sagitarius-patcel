@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Member, Transaction } from '../types/parcel';
 import {
   CreditCard,
@@ -7,7 +7,10 @@ import {
   CheckCircle2,
   ChevronRight,
   ArrowLeft,
-  ShieldCheck
+  ShieldCheck,
+  FileText,
+  Image,
+  Upload
 } from 'lucide-react';
 
 interface MemberDepositFlowProps {
@@ -25,7 +28,9 @@ export const MemberDepositFlow: React.FC<MemberDepositFlowProps> = ({
   const [amount, setAmount] = useState<number>(100000);
   const [customAmount, setCustomAmount] = useState<string>('');
   const [method, setMethod] = useState<'Transfer Bank BRI' | 'Transfer Bank BCA' | 'QRIS Instant' | 'Tunai Agen'>('Tunai Agen');
+  const [proofUrl, setProofUrl] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const remaining = Math.max(0, member.packagePrice - member.totalSaved);
 

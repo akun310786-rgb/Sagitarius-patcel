@@ -29,7 +29,8 @@ export const apiPost = async <T = any>(
   options?: SafeFetchOptions
 ): Promise<any> => {
   const fullUrl = `${API_BASE}${url}`;
-  return safePostJson<T>(fullUrl, bodyData, {}, options);
+  const fallback = {} as T;
+  return safePostJson<T>(fullUrl, bodyData, fallback, options);
 };
 
 /**

@@ -8,14 +8,13 @@ import type { NextFunction, Request, Response } from 'express';
 import { supabaseAdmin, isSupabaseConfigured } from './supabaseAdmin.js';
 import { saveAdmin } from './db.js';
 
-export type AccountRole = 'member' | 'agent' | 'korwil' | 'admin';
+export type AccountRole = 'member' | 'agent' | 'admin';
 
 export interface AuthPrincipal {
   id: string;
   role: AccountRole;
   name: string;
   agentId?: string;
-  korwilRegency?: string;
   adminRole?: 'superadmin' | 'admin' | 'finance' | 'staff';
 }
 

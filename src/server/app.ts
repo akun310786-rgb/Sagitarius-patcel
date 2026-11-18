@@ -234,7 +234,7 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
     const role = req.body?.role as AccountRole;
     const identifier = typeof req.body?.identifier === 'string' ? req.body.identifier : '';
     const password = typeof req.body?.password === 'string' ? req.body.password : '';
-    if (!['member', 'agent', 'korwil', 'admin'].includes(role) || !identifier || !password || password.length > 256) {
+    if (!['member', 'agent', 'admin'].includes(role) || !identifier || !password || password.length > 256) {
       res.status(400).json({ error: 'Masukkan jenis akun, username, dan kata sandi.' });
       return;
     }
@@ -469,11 +469,11 @@ app.get('/api/members', signedIn, async (req: Request, res: Response) => {
   } catch { res.status(500).json({ error: 'Data member tidak dapat dimuat.' }); }
 });
 
-app.post('/api/members', requireRoles('admin', 'agent', 'korwil'), async (req: Request, res: Response) => {
+app.post('/api/members', requireRoles('admin', 'agent'), async (req: Request, res: Response) => {
   try {
     const memberId = String(req.body?.id || '');
     const current = (await getAllMembers()).find((item: any) => String(item.id) === memberId);
-    const agentRegencies = new Map<string, string>((req.auth!.role === 'korwil' ? await getAllAgents() : []).map((agent: any): [string, string] => [String(agent.id), String(agent.regency || '')]));
+    const agentRegencies = new Map<string, string>((req.auth!.role === 'admin' ? await getAllAgents() : []).map((agent: any): [string, string] => [String(agent.id), String(agent.regency || '')]));
     if (!current || !canReadMember(req.auth!, current, agentRegencies)) {
       res.status(404).json({ error: 'Member tidak ditemukan.' });
       return;
@@ -498,7 +498,7 @@ app.post('/api/members', requireRoles('admin', 'agent', 'korwil'), async (req: R
 app.get('/api/transactions', signedIn, async (req: Request, res: Response) => {
   try {
     const transactions = await getAllTransactions();
-    const agentRegencies = new Map<string, string>((req.auth!.role === 'korwil' ? await getAllAgents() : []).map((agent: any): [string, string] => [String(agent.id), String(agent.regency || '')]));
+    const agentRegencies = new Map<string, string>((req.auth!.role === 'admin' ? await getAllAgents() : []).map((agent: any): [string, string] => [String(agent.id), String(agent.regency || '')]));
     res.json(transactions.filter((item: any) => canReadTransaction(req.auth!, item, agentRegencies)).map((item: any) => stripSecrets(item)));
   } catch { res.status(500).json({ error: 'Transaksi tidak dapat dimuat.' }); }
 });
@@ -508,16 +508,16 @@ app.post('/api/transactions', signedIn, async (req: Request, res: Response) => {
     const incoming = stripSecrets(req.body || {});
     const transactions = await getAllTransactions();
     const current = transactions.find((item: any) => String(item.id) === String(incoming.id));
-    const agentRegencies = new Map<string, string>((req.auth!.role === 'korwil' ? await getAllAgents() : []).map((agent: any): [string, string] => [String(agent.id), String(agent.regency || '')]));
+    const agentRegencies = new Map<string, string>((req.auth!.role === 'admin' ? await getAllAgents() : []).map((agent: any): [string, string] => [String(agent.id), String(agent.regency || '')]));
 
     if (current) {
       if (!canReadTransaction(req.auth!, current, agentRegencies)) {
         res.status(403).json({ error: 'Transaksi ini berada di luar akun Anda.' });
         return;
       }
-      const mayApprove = (req.auth!.role === 'korwil' && Boolean(req.auth!.korwilRegency)) || (req.auth!.role === 'admin' && ['superadmin', 'admin', 'finance'].includes(req.auth!.adminRole || 'staff'));
+      const mayApprove = req.auth!.role === 'admin' && ['superadmin', 'admin', 'finance'].includes(req.auth!.adminRole || 'staff');
       if (current.status !== 'Menunggu' || !['Berhasil', 'Ditolak'].includes(incoming.status) || !mayApprove) {
-        res.status(403).json({ error: 'Hanya transaksi menunggu yang dapat diproses oleh Admin atau Korwil.' });
+        res.status(403).json({ error: 'Hanya transaksi menunggu yang dapat diproses oleh Admin.' });
         return;
       }
       if (incoming.status === 'Berhasil') {

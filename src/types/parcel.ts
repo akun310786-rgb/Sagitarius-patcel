@@ -1,4 +1,4 @@
-export type UserRole = 'public' | 'member' | 'agent' | 'korwil' | 'admin';
+export type UserRole = 'public' | 'member' | 'agent' | 'admin';
 
 export interface AuthenticatedUser {
   id: string;

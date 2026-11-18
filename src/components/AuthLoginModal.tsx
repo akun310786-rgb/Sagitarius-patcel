@@ -13,7 +13,7 @@ type LoginRole = AuthenticatedUser['role'];
 
 export const AuthLoginModal: React.FC<AuthLoginModalProps> = ({ onClose, onLoginSuccess, initialRole = 'member' }) => {
   const [selectedRole, setSelectedRole] = useState<LoginRole>(
-    initialRole === 'admin' || initialRole === 'agent' || initialRole === 'korwil' ? initialRole : 'member'
+    initialRole === 'admin' || initialRole === 'agent' ? initialRole : 'member'
   );
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
@@ -84,10 +84,10 @@ export const AuthLoginModal: React.FC<AuthLoginModalProps> = ({ onClose, onLogin
           <form onSubmit={handleSubmit} className="space-y-3.5 text-xs">
             <div>
               <label htmlFor="login-identifier" className="block font-semibold text-slate-700 mb-1">
-                {selectedRole === 'member' ? 'Email / Username / Nomor Member' : selectedRole === 'agent' ? 'Kode Agen / Nomor WhatsApp' : selectedRole === 'korwil' ? 'Username Korwil' : 'Username / Email Admin'}
+                {selectedRole === 'member' ? 'Email / Username / Nomor Member' : selectedRole === 'agent' ? 'Kode Agen / Nomor WhatsApp' : 'Username / Email Admin'}
               </label>
               <input id="login-identifier" type="text" required autoComplete="username" value={identifier} onChange={(event) => setIdentifier(event.target.value)}
-                placeholder={selectedRole === 'member' ? 'Masukkan username, email, atau nomor member' : selectedRole === 'agent' ? 'Masukkan kode agen atau nomor WhatsApp' : selectedRole === 'korwil' ? 'Masukkan username Korwil' : 'Masukkan username atau email admin'}
+                placeholder={selectedRole === 'member' ? 'Masukkan username, email, atau nomor member' : selectedRole === 'agent' ? 'Masukkan kode agen atau nomor WhatsApp' : 'Masukkan username atau email admin'}
                 className="w-full px-3 py-2.5 border border-slate-300 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-purple-600 font-medium text-xs bg-slate-50/50 text-slate-900" />
             </div>
             <div>

@@ -366,8 +366,6 @@ export default function App() {
           ? 'Buku Tabungan'
           : user.role === 'agent'
           ? 'Mitra Agen'
-          : user.role === 'korwil'
-          ? 'Korwil'
           : 'Admin Pusat'
       }.`,
       type: 'success'
